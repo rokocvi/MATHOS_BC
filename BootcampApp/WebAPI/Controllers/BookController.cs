@@ -9,19 +9,20 @@ namespace WebAPI.Controllers
     [ApiController]
     public class BookController : ControllerBase
     {
-        private static List<Book> books = new List<Book>
+        public static List<Book> books = new List<Book>
         {
-            new Book { Id = 1, Title = "Na Drini ćuprija", Author = "Ivo Andrić" },
-            new Book { Id = 2, Title = "Zločin i kazna", Author = "Fjodor Dostojevski" },
-            new Book { Id = 3, Title = "Rat i mir", Author = "Lav Tolstoj" },
-            new Book { Id = 4, Title = "Mali princ", Author = "Antoine de Saint-Exupéry" },
-            new Book { Id = 5, Title = "Gorski vijenac", Author = "Petar II Petrović Njegoš" },
-            new Book { Id = 6, Title = "Ana Karenjina", Author = "Lav Tolstoj" },
-            new Book { Id = 7, Title = "1984", Author = "George Orwell" },
-            new Book { Id = 8, Title = "Ponos i predrasude", Author = "Jane Austen" },
-            new Book { Id = 9, Title = "Lovac u žitu", Author = "J.D. Salinger" },
-            new Book { Id = 10, Title = "Braća Karamazovi", Author = "Fjodor Dostojevski" }
+            new Book { Id = 1, Title = "Na Drini ćuprija", Author = "Ivo Andrić", AuthorId = 1 },
+            new Book { Id = 2, Title = "Zločin i kazna", Author = "Fjodor Dostojevski", AuthorId = 2 },
+            new Book { Id = 3, Title = "Rat i mir", Author = "Lav Tolstoj", AuthorId = 3 },
+            new Book { Id = 4, Title = "Mali princ", Author = "Antoine de Saint-Exupéry", AuthorId = 4 },
+            new Book { Id = 5, Title = "Gorski vijenac", Author = "Petar II Petrović Njegoš", AuthorId = 5 },
+            new Book { Id = 6, Title = "Ana Karenjina", Author = "Lav Tolstoj", AuthorId = 3 },
+            new Book { Id = 7, Title = "1984", Author = "George Orwell", AuthorId = 6 },
+            new Book { Id = 8, Title = "Ponos i predrasude", Author = "Jane Austen", AuthorId = 7 },
+            new Book { Id = 9, Title = "Lovac u žitu", Author = "J.D. Salinger", AuthorId = 8 },
+            new Book { Id = 10, Title = "Braća Karamazovi", Author = "Fjodor Dostojevski", AuthorId = 2 }
         };
+
 
 
         [HttpGet]
