@@ -103,5 +103,20 @@ namespace WebAPI.Controllers
         {
             return Ok(books.Count());
         }
+
+        [HttpGet("random")]
+
+        public ActionResult<Book> GetRandomBook()
+        {
+            if (!books.Any())
+            {
+                return NotFound("No books available");
+            }
+
+            var random = new Random();
+            var book = books[random.Next(books.Count)];
+
+            return Ok(book);
+        }
     }
 }
