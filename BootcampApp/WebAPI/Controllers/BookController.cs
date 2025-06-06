@@ -129,5 +129,86 @@ namespace WebAPI.Controllers
             return Ok(latest);
              
         }
+
+        [HttpPost("multibulk")]
+        public ActionResult AddMultipleListsOfBooks([FromBody] List<List<Book>> bookGroups)
+        {
+            if (bookGroups == null || !bookGroups.Any())
+                return BadRequest("Nema poslanih listi knjiga.");
+
+            var errors = new List<string>();
+            int addedCount = 0;
+            int nextId = books.Any() ? books.Max(b => b.Id) + 1 : 1;
+
+            
+            var existingTitles = new HashSet<string>(books.Select(b => b.Title.Trim().ToLower()));
+
+        
+            var titlesInRequest = new HashSet<string>();
+
+            foreach (var group in bookGroups)
+            {
+                if (group == null || !group.Any())
+                {
+                    errors.Add("Jedna od listi knjiga je prazna.");
+                    continue;
+                }
+
+                foreach (var book in group)
+                {
+                    if (string.IsNullOrWhiteSpace(book.Title))
+                    {
+                        errors.Add("Knjiga s praznim naslovom nije dodana.");
+                        continue;
+                    }
+
+                    var normalizedTitle = book.Title.Trim().ToLower();
+
+                    if (string.IsNullOrWhiteSpace(book.Author))
+                    {
+                        errors.Add($"Autor nije naveden za knjigu '{book.Title}'.");
+                        continue;
+                    }
+
+                    if (existingTitles.Contains(normalizedTitle))
+                    {
+                        errors.Add($"Knjiga sa naslovom '{book.Title}' već postoji u bazi.");
+                        continue;
+                    }
+
+                    if (titlesInRequest.Contains(normalizedTitle))
+                    {
+                        errors.Add($"Knjiga sa naslovom '{book.Title}' je duplikat unutar zahtjeva.");
+                        continue;
+                    }
+
+                   
+                    titlesInRequest.Add(normalizedTitle);
+
+                    book.Id = nextId++;
+                    books.Add(book);
+                    addedCount++;
+                }
+            }
+
+            if (errors.Any())
+            {
+                return BadRequest(new
+                {
+                    poruka = "Dio knjiga nije dodan zbog grešaka.",
+                    dodano = addedCount,
+                    greske = errors
+                });
+            }
+
+            return Ok(new
+            {
+                poruka = "Sve knjige su uspješno dodane.",
+                ukupno = addedCount
+            });
+        }
+
+
+
     }
 }
