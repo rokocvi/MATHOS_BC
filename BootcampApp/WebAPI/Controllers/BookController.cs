@@ -11,9 +11,18 @@ namespace WebAPI.Controllers
     {
         private static List<Book> books = new List<Book>
         {
-            new Book { Id = 1, Title = "Na Drini čuprija", Author = "Ivo Andrić" },
-            new Book { Id = 2, Title = "Zločin i kazna", Author = "Dostojevski" }
+            new Book { Id = 1, Title = "Na Drini ćuprija", Author = "Ivo Andrić" },
+            new Book { Id = 2, Title = "Zločin i kazna", Author = "Fjodor Dostojevski" },
+            new Book { Id = 3, Title = "Rat i mir", Author = "Lav Tolstoj" },
+            new Book { Id = 4, Title = "Mali princ", Author = "Antoine de Saint-Exupéry" },
+            new Book { Id = 5, Title = "Gorski vijenac", Author = "Petar II Petrović Njegoš" },
+            new Book { Id = 6, Title = "Ana Karenjina", Author = "Lav Tolstoj" },
+            new Book { Id = 7, Title = "1984", Author = "George Orwell" },
+            new Book { Id = 8, Title = "Ponos i predrasude", Author = "Jane Austen" },
+            new Book { Id = 9, Title = "Lovac u žitu", Author = "J.D. Salinger" },
+            new Book { Id = 10, Title = "Braća Karamazovi", Author = "Fjodor Dostojevski" }
         };
+
 
         [HttpGet]
         public ActionResult<IEnumerable<Book>> GetBooks()
@@ -51,18 +60,19 @@ namespace WebAPI.Controllers
             return NoContent();
         }
 
-        
+        [HttpPut("{id}")]
+        public IActionResult UpdateBook(int id, [FromBody] Book updatedBook)
+        {
+            var book = books.FirstOrDefault(b => b.Id == id);
+            if (book == null)
+                return NotFound();
 
+            
+            book.Title = updatedBook.Title;
+            book.Author = updatedBook.Author;
 
-    }
+            return Ok(book);
+        }
 
-    
-
-
-    public class Book
-    {
-        public int Id { get; set; }
-        public string? Title { get; set; }
-        public string? Author { get; set; }
     }
 }
