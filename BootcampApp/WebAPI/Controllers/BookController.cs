@@ -118,5 +118,16 @@ namespace WebAPI.Controllers
 
             return Ok(book);
         }
+
+        [HttpGet("latest")]
+        public ActionResult<Book> GetLatestBook()
+        {
+            if (!books.Any())
+                return NotFound("No books available.");
+
+            var latest = books.OrderByDescending(b => b.Id).First();
+            return Ok(latest);
+             
+        }
     }
 }
