@@ -74,5 +74,34 @@ namespace WebAPI.Controllers
             return Ok(book);
         }
 
+        [HttpGet("search")]
+
+        public ActionResult <List<Book>> SearchBook([FromQuery] string query)
+        {
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                return BadRequest("Query parameter is required. ");
+            }
+
+            var results = books
+                          .Where(b => b.Title.Contains(query, StringComparison.OrdinalIgnoreCase)
+                          || b.Author.Contains(query, StringComparison.OrdinalIgnoreCase))
+                           .ToList();
+
+            if(results.Count == 0)
+            {
+                return NotFound("No books matching from query");
+            }
+
+            return Ok(results);
+
+        }
+
+        [HttpGet("count")]
+
+        public ActionResult<int> Count()
+        {
+            return Ok(books.Count());
+        }
     }
 }
