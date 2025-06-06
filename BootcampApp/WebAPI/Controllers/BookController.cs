@@ -33,11 +33,25 @@ namespace WebAPI.Controllers
         [HttpPost]
 
         public ActionResult<Book> AddBook([FromBody] Book newBook)
-        {
+        {   
             newBook.Id = books.Count > 0 ? books.Max(b => b.Id) + 1 : 1;
             books.Add(newBook);
             return CreatedAtAction(nameof(GetBook), new { id = newBook.Id }, newBook);
         }
+
+        [HttpDelete("{id}")]
+
+        public IActionResult DeleteBook(int id)
+        {
+            var book = books.FirstOrDefault(b => b.Id == id);
+            if (book == null)
+                return NotFound();
+            books.Remove(book);
+
+            return NoContent();
+        }
+
+        
 
 
     }
