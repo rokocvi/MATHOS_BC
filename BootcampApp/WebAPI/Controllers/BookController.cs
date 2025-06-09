@@ -356,12 +356,40 @@ namespace WebAPI.Controllers
                     return NotFound("Book not found.");
                 }
 
-                return NoContent(); // ili možeš vratiti Ok ili čak updatedBook ako želiš
+                return NoContent(); 
             }
             catch (Exception ex)
             {
                 return BadRequest(new { error = ex.Message });
             }
+        }
+
+        [HttpDelete("db/{id}")]
+        public IActionResult DeleteBookFromDb(int id)
+        {
+            try
+            {
+                using var conn = new NpgsqlConnection(_connectionString);
+                conn.Open();
+
+
+                using var cmd = new NpgsqlCommand("DELETE FROM books where id = @id", conn);
+                cmd.Parameters.AddWithValue("id", id);
+
+                int rowsAffected = cmd.ExecuteNonQuery();
+
+                if (rowsAffected == 0)
+                {
+                    return NotFound("Book not found.");
+                }
+
+                return NoContent(); 
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        
         }
 
 
