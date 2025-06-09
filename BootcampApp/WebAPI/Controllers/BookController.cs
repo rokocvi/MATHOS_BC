@@ -8,7 +8,7 @@ namespace WebAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class BookController : ControllerBase
+    public partial class BookController : ControllerBase
     {
         public static List<Book> books = new List<Book>
         {
@@ -392,6 +392,61 @@ namespace WebAPI.Controllers
         
         }
 
+        [HttpGet("authors/under50")]
+        public List<Author> GetAuthorsUnder50WithBooks()
+        {
+            var authors = new List<Author>();
+
+            using (var conn = new NpgsqlConnection(_connectionString))
+            {
+                conn.Open();
+
+                string sql = @"
+            SELECT a.id as AuthorId, a.name, a.age, b.id as BookId, b.title
+            FROM authors a
+            LEFT JOIN books b ON a.id = b.authorid
+            WHERE a.age < 60;
+        ";
+
+                using var cmd = new NpgsqlCommand(sql, conn);
+                using var reader = cmd.ExecuteReader();
+
+                var authorDict = new Dictionary<int, Author>();
+
+                while (reader.Read())
+                {
+                    int authorId = reader.GetInt32(reader.GetOrdinal("AuthorId"));
+
+                    if (!authorDict.TryGetValue(authorId, out var author))
+                    {
+                        author = new Author
+                        {
+                            Id = authorId,
+                            Name = reader.GetString(reader.GetOrdinal("name")),
+                            Age = reader.GetInt32(reader.GetOrdinal("age")),
+                            Books = new List<Book>()
+                        };
+                        authorDict[authorId] = author;
+                    }
+
+                    if (!reader.IsDBNull(reader.GetOrdinal("BookId")))
+                    {
+                        var book = new Book
+                        {
+                            Id = reader.GetInt32(reader.GetOrdinal("BookId")),
+                            Title = reader.GetString(reader.GetOrdinal("title")),
+                            Author = reader.GetString(reader.GetOrdinal("name")),
+                            AuthorId = authorId
+                        };
+                        author.Books.Add(book);
+                    }
+                }
+
+                authors = authorDict.Values.ToList();
+            }
+
+            return authors;
+        }
 
 
     }
