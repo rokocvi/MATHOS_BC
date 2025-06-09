@@ -1,0 +1,19 @@
+﻿namespace WebAPI.Controllers
+{
+    public partial class BookController
+    {
+        public class Library
+        {
+            public int Id { get; set; }
+            public string? Name { get; set; }
+            public string? Address { get; set; }
+
+            // Navigacijsko polje
+            public List<Book>? Books { get; set; }
+        }
+
+
+
+
+    }
+}
