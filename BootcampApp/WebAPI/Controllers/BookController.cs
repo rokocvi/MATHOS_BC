@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Npgsql;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -23,6 +24,45 @@ namespace WebAPI.Controllers
             new Book { Id = 10, Title = "Braća Karamazovi", Author = "Fjodor Dostojevski", AuthorId = 2 }
         };
 
+        private readonly string _connectionString = "Host=localhost;Port=5432;Username=postgres;Password=UtwG5EC4;Database=postgres";
+
+        [HttpGet("db")]
+        public ActionResult<List<Book>> GetAllBooksFromDb()
+        {
+            var books = new List<Book>();
+
+
+            try
+            {
+                using (var conn = new NpgsqlConnection(_connectionString))
+                {
+                    conn.Open();
+
+                    using (var cmd = new NpgsqlCommand("SELECT id, title, author, authorid FROM books", conn))
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            books.Add(new Book
+                            {
+                                Id = reader.GetInt32(0),
+                                Title = reader.GetString(1),
+                                Author = reader.GetString(2),
+                                AuthorId = reader.GetInt32(3)
+                            });
+                        }
+                    }
+                }
+
+                return Ok(books);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Greška prilikom dohvaćanja podataka iz baze.", error = ex.Message });
+            }
+
+            
+        }
 
 
         [HttpGet]
@@ -207,6 +247,121 @@ namespace WebAPI.Controllers
                 poruka = "Sve knjige su uspješno dodane.",
                 ukupno = addedCount
             });
+        }
+
+        [HttpGet("db/{id}")]
+        public ActionResult<Book> GetBookFromDb(int id)
+        {
+            try
+            {
+                using (var conn = new NpgsqlConnection(_connectionString))
+                {
+                    conn.Open();
+
+                    using (var cmd = new NpgsqlCommand("SELECT id, title, author, authorid FROM books WHERE id = @id", conn))
+                    {
+                        cmd.Parameters.AddWithValue("id", id);
+
+                        using (var reader = cmd.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                var book = new Book
+                                {
+                                    Id = reader.GetInt32(0),
+                                    Title = reader.GetString(1),
+                                    Author = reader.GetString(2),
+                                    AuthorId = reader.GetInt32(3)
+                                };
+
+                                return Ok(book);
+                            }
+                            else
+                            {
+                                return NotFound("Knjiga nije pronađena.");
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+
+        [HttpPost("db")]
+        public ActionResult<Book> AddBookToDb([FromBody] Book newBook)
+        {
+            if (newBook == null || string.IsNullOrWhiteSpace(newBook.Title) || string.IsNullOrWhiteSpace(newBook.Author))
+            {
+                return BadRequest("Title and Author are required.");
+            }
+
+            try
+            {
+                using var conn = new NpgsqlConnection(_connectionString);
+                conn.Open();
+
+                using var cmd = new NpgsqlCommand(
+                    "INSERT INTO books (title, author, authorid) VALUES (@title, @author, @authorid) RETURNING id",
+                    conn);
+                cmd.Parameters.AddWithValue("title", newBook.Title);
+                cmd.Parameters.AddWithValue("author", newBook.Author);
+                cmd.Parameters.AddWithValue("authorid", newBook.AuthorId);
+
+                var result = cmd.ExecuteScalar();
+
+                if (result != null)
+                {
+                    newBook.Id = Convert.ToInt32(result);
+                    return CreatedAtAction(nameof(GetBookFromDb), new { id = newBook.Id }, newBook);
+                }
+
+                return StatusCode(500, "Insert failed.");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        [HttpPut("db/{id}")]
+        public IActionResult UpdateBookInDb(int id, [FromBody] Book updatedBook)
+        {
+            if (updatedBook == null || string.IsNullOrWhiteSpace(updatedBook.Title) || string.IsNullOrWhiteSpace(updatedBook.Author))
+            {
+                return BadRequest("Title and Author are required.");
+            }
+
+            try
+            {
+                using var conn = new NpgsqlConnection(_connectionString);
+                conn.Open();
+
+                using var cmd = new NpgsqlCommand(
+                    "UPDATE books SET title = @title, author = @author, authorid = @authorid WHERE id = @id",
+                    conn);
+
+                cmd.Parameters.AddWithValue("title", updatedBook.Title);
+                cmd.Parameters.AddWithValue("author", updatedBook.Author);
+                cmd.Parameters.AddWithValue("authorid", updatedBook.AuthorId);
+                cmd.Parameters.AddWithValue("id", id);
+
+                int rowsAffected = cmd.ExecuteNonQuery();
+
+                if (rowsAffected == 0)
+                {
+                    return NotFound("Book not found.");
+                }
+
+                return NoContent(); // ili možeš vratiti Ok ili čak updatedBook ako želiš
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
         }
 
 
