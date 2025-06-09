@@ -392,61 +392,114 @@ namespace WebAPI.Controllers
         
         }
 
-        [HttpGet("authors/under50")]
-        public List<Author> GetAuthorsUnder50WithBooks()
+        [HttpGet("author/{authorId}/books")]
+        public ActionResult<List<Book>> GetBooksByAuthorId(int authorId)
         {
-            var authors = new List<Author>();
+            var books = new List<Book>();
 
-            using (var conn = new NpgsqlConnection(_connectionString))
+            try
             {
+                using var conn = new NpgsqlConnection(_connectionString);
                 conn.Open();
 
-                string sql = @"
-            SELECT a.id as AuthorId, a.name, a.age, b.id as BookId, b.title
-            FROM authors a
-            LEFT JOIN books b ON a.id = b.authorid
-            WHERE a.age < 60;
-        ";
+                using var cmd = new NpgsqlCommand("SELECT id, title, author, authorid FROM books WHERE authorid = @aid", conn);
+                cmd.Parameters.AddWithValue("aid", authorId);
 
-                using var cmd = new NpgsqlCommand(sql, conn);
                 using var reader = cmd.ExecuteReader();
-
-                var authorDict = new Dictionary<int, Author>();
-
                 while (reader.Read())
                 {
-                    int authorId = reader.GetInt32(reader.GetOrdinal("AuthorId"));
-
-                    if (!authorDict.TryGetValue(authorId, out var author))
+                    books.Add(new Book
                     {
-                        author = new Author
-                        {
-                            Id = authorId,
-                            Name = reader.GetString(reader.GetOrdinal("name")),
-                            Age = reader.GetInt32(reader.GetOrdinal("age")),
-                            Books = new List<Book>()
-                        };
-                        authorDict[authorId] = author;
-                    }
-
-                    if (!reader.IsDBNull(reader.GetOrdinal("BookId")))
-                    {
-                        var book = new Book
-                        {
-                            Id = reader.GetInt32(reader.GetOrdinal("BookId")),
-                            Title = reader.GetString(reader.GetOrdinal("title")),
-                            Author = reader.GetString(reader.GetOrdinal("name")),
-                            AuthorId = authorId
-                        };
-                        author.Books.Add(book);
-                    }
+                        Id = reader.GetInt32(0),
+                        Title = reader.GetString(1),
+                        Author = reader.GetString(2),
+                        AuthorId = reader.GetInt32(3)
+                    });
                 }
 
-                authors = authorDict.Values.ToList();
-            }
+                if (!books.Any())
+                    return NotFound($"Nema knjiga za autora s ID-em {authorId}.");
 
-            return authors;
+                return Ok(books);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
         }
+
+        [HttpGet("library/{libraryId}/books")]
+        public IActionResult GetBooksByLibrary(int libraryId)
+        {
+            var books = new List<Book>();
+
+            try
+            {
+                using var conn = new NpgsqlConnection(_connectionString);
+                conn.Open();
+
+                using var cmd = new NpgsqlCommand(
+                    "SELECT id, title, author, authorid, libraryid FROM books WHERE libraryid = @libraryid", conn);
+                cmd.Parameters.AddWithValue("libraryid", libraryId);
+
+                using var reader = cmd.ExecuteReader();
+                while (reader.Read())
+                {
+                    books.Add(new Book
+                    {
+                        Id = reader.GetInt32(0),
+                        Title = reader.GetString(1),
+                        Author = reader.IsDBNull(2) ? null : reader.GetString(2),
+                        AuthorId = reader.GetInt32(3),
+                        LibraryId = reader.IsDBNull(4) ? null : reader.GetInt32(4)
+                    });
+                }
+
+                return Ok(books);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("genres/bybook/{bookId}")]
+        public IActionResult GetGenresByBookId(int bookId)
+        {
+            try
+            {
+                using var conn = new NpgsqlConnection(_connectionString);
+                conn.Open();
+
+                using var cmd = new NpgsqlCommand(
+                    "SELECT g.id, g.name FROM genres g " +
+                    "JOIN book_genres bg ON g.id = bg.genreid " +
+                    "WHERE bg.bookid = @bookId", conn);
+
+                cmd.Parameters.AddWithValue("bookId", bookId);
+
+                var genres = new List<Genre>();
+
+                using var reader = cmd.ExecuteReader();
+                while (reader.Read())
+                {
+                    genres.Add(new Genre
+                    {
+                        Id = reader.GetInt32(0),
+                        Name = reader.GetString(1),
+ 
+                    });
+                }
+
+                return Ok(genres);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+
 
 
     }
