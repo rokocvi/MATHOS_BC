@@ -1,7 +1,9 @@
-﻿using static WebAPI.Controllers.BookController;
+﻿
 
-namespace WebAPI.Controllers
+namespace BootcampApp.Models
 {
+
+
     public class Book
     {
         public int Id { get; set; }

@@ -1,5 +1,9 @@
-
-using Npgsql;
+using BootcampApp.Repository.Interfaces;
+using BootcampApp.Repository;
+using BootcampApp.Service.Interfaces;
+using BootcampApp.Service;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace WebAPI
 {
@@ -7,19 +11,25 @@ namespace WebAPI
     {
         public static void Main(string[] args)
         {
-
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
-
+            // Dodaj servise PRIJED Build()
             builder.Services.AddControllers();
-            // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
+            // Ako imaš connection string u appsettings.json
+            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+            // Registracija repozitorija i servisa
+            builder.Services.AddScoped<IBookRepository>(provider => new BookRepository(connectionString));
+            builder.Services.AddScoped<IBookService, BookService>();
+            builder.Services.AddScoped<IAuthorRepository, AuthorRepository>();
+            builder.Services.AddScoped<IAuthorService, AuthorService>();
+
             var app = builder.Build();
 
-            // Configure the HTTP request pipeline.
+            // Konfiguracija middlewarea
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
@@ -27,9 +37,7 @@ namespace WebAPI
             }
 
             app.UseHttpsRedirection();
-
             app.UseAuthorization();
-
 
             app.MapControllers();
 

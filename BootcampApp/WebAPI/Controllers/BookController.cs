@@ -1,8 +1,8 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Npgsql;
+﻿using Microsoft.AspNetCore.Mvc;
+using BootcampApp.Models;
+using BootcampApp.Service;
 using System.Collections.Generic;
-using System.Linq;
+using BootcampApp.Service.Interfaces;
 
 namespace WebAPI.Controllers
 {
@@ -10,497 +10,84 @@ namespace WebAPI.Controllers
     [ApiController]
     public partial class BookController : ControllerBase
     {
-        public static List<Book> books = new List<Book>
+        private readonly IBookService _bookService;
+
+        public BookController(IBookService bookService)
         {
-            new Book { Id = 1, Title = "Na Drini ćuprija", Author = "Ivo Andrić", AuthorId = 1 },
-            new Book { Id = 2, Title = "Zločin i kazna", Author = "Fjodor Dostojevski", AuthorId = 2 },
-            new Book { Id = 3, Title = "Rat i mir", Author = "Lav Tolstoj", AuthorId = 3 },
-            new Book { Id = 4, Title = "Mali princ", Author = "Antoine de Saint-Exupéry", AuthorId = 4 },
-            new Book { Id = 5, Title = "Gorski vijenac", Author = "Petar II Petrović Njegoš", AuthorId = 5 },
-            new Book { Id = 6, Title = "Ana Karenjina", Author = "Lav Tolstoj", AuthorId = 3 },
-            new Book { Id = 7, Title = "1984", Author = "George Orwell", AuthorId = 6 },
-            new Book { Id = 8, Title = "Ponos i predrasude", Author = "Jane Austen", AuthorId = 7 },
-            new Book { Id = 9, Title = "Lovac u žitu", Author = "J.D. Salinger", AuthorId = 8 },
-            new Book { Id = 10, Title = "Braća Karamazovi", Author = "Fjodor Dostojevski", AuthorId = 2 }
-        };
-
-        private readonly string _connectionString = "Host=localhost;Port=5432;Username=postgres;Password=UtwG5EC4;Database=postgres";
-
-        [HttpGet("db")]
-        public ActionResult<List<Book>> GetAllBooksFromDb()
-        {
-            var books = new List<Book>();
-
-
-            try
-            {
-                using (var conn = new NpgsqlConnection(_connectionString))
-                {
-                    conn.Open();
-
-                    using (var cmd = new NpgsqlCommand("SELECT id, title, author, authorid FROM books", conn))
-                    using (var reader = cmd.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            books.Add(new Book
-                            {
-                                Id = reader.GetInt32(0),
-                                Title = reader.GetString(1),
-                                Author = reader.GetString(2),
-                                AuthorId = reader.GetInt32(3)
-                            });
-                        }
-                    }
-                }
-
-                return Ok(books);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Greška prilikom dohvaćanja podataka iz baze.", error = ex.Message });
-            }
-
-            
+            _bookService = bookService;
         }
 
-
         [HttpGet]
-        public ActionResult<IEnumerable<Book>> GetBooks()
+        public ActionResult<List<Book>> GetBooks()
         {
+            var books = _bookService.GetAllBooks();
             return Ok(books);
         }
 
         [HttpGet("{id}")]
         public ActionResult<Book> GetBook(int id)
         {
-            var book = books.FirstOrDefault(b => b.Id == id);
+            var book = _bookService.GetBook(id);
             if (book == null)
                 return NotFound();
+
             return Ok(book);
         }
 
         [HttpPost]
-
         public ActionResult<Book> AddBook([FromBody] Book newBook)
-        {   
-            newBook.Id = books.Count > 0 ? books.Max(b => b.Id) + 1 : 1;
-            books.Add(newBook);
-            return CreatedAtAction(nameof(GetBook), new { id = newBook.Id }, newBook);
-        }
-
-        [HttpDelete("{id}")]
-
-        public IActionResult DeleteBook(int id)
         {
-            var book = books.FirstOrDefault(b => b.Id == id);
-            if (book == null)
-                return NotFound();
-            books.Remove(book);
+            if (newBook == null || string.IsNullOrWhiteSpace(newBook.Title) || string.IsNullOrWhiteSpace(newBook.Author))
+                return BadRequest("Title and Author are required.");
 
-            return NoContent();
+            var addedBook = _bookService.AddBook(newBook);
+            return CreatedAtAction(nameof(GetBook), new { id = addedBook.Id }, addedBook);
         }
 
         [HttpPut("{id}")]
         public IActionResult UpdateBook(int id, [FromBody] Book updatedBook)
         {
-            var book = books.FirstOrDefault(b => b.Id == id);
-            if (book == null)
+            var existingBook = _bookService.GetBook(id);
+            if (existingBook == null)
                 return NotFound();
 
-            
-            book.Title = updatedBook.Title;
-            book.Author = updatedBook.Author;
-
-            return Ok(book);
+            _bookService.UpdateBook(id, updatedBook);
+            return NoContent();
         }
 
-        [HttpGet("search")]
-
-        public ActionResult <List<Book>> SearchBook([FromQuery] string query)
+        [HttpDelete("{id}")]
+        public IActionResult DeleteBook(int id)
         {
-            if (string.IsNullOrWhiteSpace(query))
-            {
-                return BadRequest("Query parameter is required. ");
-            }
+            var existingBook = _bookService.GetBook(id);
+            if (existingBook == null)
+                return NotFound();
 
-            var results = books
-                          .Where(b => b.Title.Contains(query, StringComparison.OrdinalIgnoreCase)
-                          || b.Author.Contains(query, StringComparison.OrdinalIgnoreCase))
-                           .ToList();
-
-            if(results.Count == 0)
-            {
-                return NotFound("No books matching from query");
-            }
-
-            return Ok(results);
-
-        }
-
-        [HttpGet("count")]
-
-        public ActionResult<int> Count()
-        {
-            return Ok(books.Count());
-        }
-
-        [HttpGet("random")]
-
-        public ActionResult<Book> GetRandomBook()
-        {
-            if (!books.Any())
-            {
-                return NotFound("No books available");
-            }
-
-            var random = new Random();
-            var book = books[random.Next(books.Count)];
-
-            return Ok(book);
-        }
-
-        [HttpGet("latest")]
-        public ActionResult<Book> GetLatestBook()
-        {
-            if (!books.Any())
-                return NotFound("No books available.");
-
-            var latest = books.OrderByDescending(b => b.Id).First();
-            return Ok(latest);
-             
-        }
-
-        [HttpPost("multibulk")]
-        public ActionResult AddMultipleListsOfBooks([FromBody] List<List<Book>> bookGroups)
-        {
-            if (bookGroups == null || !bookGroups.Any())
-                return BadRequest("Nema poslanih listi knjiga.");
-
-            var errors = new List<string>();
-            int addedCount = 0;
-            int nextId = books.Any() ? books.Max(b => b.Id) + 1 : 1;
-
-            
-            var existingTitles = new HashSet<string>(books.Select(b => b.Title.Trim().ToLower()));
-
-        
-            var titlesInRequest = new HashSet<string>();
-
-            foreach (var group in bookGroups)
-            {
-                if (group == null || !group.Any())
-                {
-                    errors.Add("Jedna od listi knjiga je prazna.");
-                    continue;
-                }
-
-                foreach (var book in group)
-                {
-                    if (string.IsNullOrWhiteSpace(book.Title))
-                    {
-                        errors.Add("Knjiga s praznim naslovom nije dodana.");
-                        continue;
-                    }
-
-                    var normalizedTitle = book.Title.Trim().ToLower();
-
-                    if (string.IsNullOrWhiteSpace(book.Author))
-                    {
-                        errors.Add($"Autor nije naveden za knjigu '{book.Title}'.");
-                        continue;
-                    }
-
-                    if (existingTitles.Contains(normalizedTitle))
-                    {
-                        errors.Add($"Knjiga sa naslovom '{book.Title}' već postoji u bazi.");
-                        continue;
-                    }
-
-                    if (titlesInRequest.Contains(normalizedTitle))
-                    {
-                        errors.Add($"Knjiga sa naslovom '{book.Title}' je duplikat unutar zahtjeva.");
-                        continue;
-                    }
-
-                   
-                    titlesInRequest.Add(normalizedTitle);
-
-                    book.Id = nextId++;
-                    books.Add(book);
-                    addedCount++;
-                }
-            }
-
-            if (errors.Any())
-            {
-                return BadRequest(new
-                {
-                    poruka = "Dio knjiga nije dodan zbog grešaka.",
-                    dodano = addedCount,
-                    greske = errors
-                });
-            }
-
-            return Ok(new
-            {
-                poruka = "Sve knjige su uspješno dodane.",
-                ukupno = addedCount
-            });
-        }
-
-        [HttpGet("db/{id}")]
-        public ActionResult<Book> GetBookFromDb(int id)
-        {
-            try
-            {
-                using (var conn = new NpgsqlConnection(_connectionString))
-                {
-                    conn.Open();
-
-                    using (var cmd = new NpgsqlCommand("SELECT id, title, author, authorid FROM books WHERE id = @id", conn))
-                    {
-                        cmd.Parameters.AddWithValue("id", id);
-
-                        using (var reader = cmd.ExecuteReader())
-                        {
-                            if (reader.Read())
-                            {
-                                var book = new Book
-                                {
-                                    Id = reader.GetInt32(0),
-                                    Title = reader.GetString(1),
-                                    Author = reader.GetString(2),
-                                    AuthorId = reader.GetInt32(3)
-                                };
-
-                                return Ok(book);
-                            }
-                            else
-                            {
-                                return NotFound("Knjiga nije pronađena.");
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
-        }
-
-
-        [HttpPost("db")]
-        public ActionResult<Book> AddBookToDb([FromBody] Book newBook)
-        {
-            if (newBook == null || string.IsNullOrWhiteSpace(newBook.Title) || string.IsNullOrWhiteSpace(newBook.Author))
-            {
-                return BadRequest("Title and Author are required.");
-            }
-
-            try
-            {
-                using var conn = new NpgsqlConnection(_connectionString);
-                conn.Open();
-
-                using var cmd = new NpgsqlCommand(
-                    "INSERT INTO books (title, author, authorid) VALUES (@title, @author, @authorid) RETURNING id",
-                    conn);
-                cmd.Parameters.AddWithValue("title", newBook.Title);
-                cmd.Parameters.AddWithValue("author", newBook.Author);
-                cmd.Parameters.AddWithValue("authorid", newBook.AuthorId);
-
-                var result = cmd.ExecuteScalar();
-
-                if (result != null)
-                {
-                    newBook.Id = Convert.ToInt32(result);
-                    return CreatedAtAction(nameof(GetBookFromDb), new { id = newBook.Id }, newBook);
-                }
-
-                return StatusCode(500, "Insert failed.");
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
-        }
-
-        [HttpPut("db/{id}")]
-        public IActionResult UpdateBookInDb(int id, [FromBody] Book updatedBook)
-        {
-            if (updatedBook == null || string.IsNullOrWhiteSpace(updatedBook.Title) || string.IsNullOrWhiteSpace(updatedBook.Author))
-            {
-                return BadRequest("Title and Author are required.");
-            }
-
-            try
-            {
-                using var conn = new NpgsqlConnection(_connectionString);
-                conn.Open();
-
-                using var cmd = new NpgsqlCommand(
-                    "UPDATE books SET title = @title, author = @author, authorid = @authorid WHERE id = @id",
-                    conn);
-
-                cmd.Parameters.AddWithValue("title", updatedBook.Title);
-                cmd.Parameters.AddWithValue("author", updatedBook.Author);
-                cmd.Parameters.AddWithValue("authorid", updatedBook.AuthorId);
-                cmd.Parameters.AddWithValue("id", id);
-
-                int rowsAffected = cmd.ExecuteNonQuery();
-
-                if (rowsAffected == 0)
-                {
-                    return NotFound("Book not found.");
-                }
-
-                return NoContent(); 
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
-        }
-
-        [HttpDelete("db/{id}")]
-        public IActionResult DeleteBookFromDb(int id)
-        {
-            try
-            {
-                using var conn = new NpgsqlConnection(_connectionString);
-                conn.Open();
-
-
-                using var cmd = new NpgsqlCommand("DELETE FROM books where id = @id", conn);
-                cmd.Parameters.AddWithValue("id", id);
-
-                int rowsAffected = cmd.ExecuteNonQuery();
-
-                if (rowsAffected == 0)
-                {
-                    return NotFound("Book not found.");
-                }
-
-                return NoContent(); 
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
-        
+            _bookService.DeleteBook(id);
+            return NoContent();
         }
 
         [HttpGet("author/{authorId}/books")]
-        public ActionResult<List<Book>> GetBooksByAuthorId(int authorId)
+        public ActionResult<List<Book>> GetBooksByAuthor(int authorId)
         {
-            var books = new List<Book>();
+            var books = _bookService.GetBooksByAuthor(authorId);
+            if (books == null || books.Count == 0)
+                return NotFound($"No books found for author with ID {authorId}.");
 
-            try
-            {
-                using var conn = new NpgsqlConnection(_connectionString);
-                conn.Open();
-
-                using var cmd = new NpgsqlCommand("SELECT id, title, author, authorid FROM books WHERE authorid = @aid", conn);
-                cmd.Parameters.AddWithValue("aid", authorId);
-
-                using var reader = cmd.ExecuteReader();
-                while (reader.Read())
-                {
-                    books.Add(new Book
-                    {
-                        Id = reader.GetInt32(0),
-                        Title = reader.GetString(1),
-                        Author = reader.GetString(2),
-                        AuthorId = reader.GetInt32(3)
-                    });
-                }
-
-                if (!books.Any())
-                    return NotFound($"Nema knjiga za autora s ID-em {authorId}.");
-
-                return Ok(books);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { error = ex.Message });
-            }
+            return Ok(books);
         }
 
         [HttpGet("library/{libraryId}/books")]
-        public IActionResult GetBooksByLibrary(int libraryId)
+        public ActionResult<List<Book>> GetBooksByLibrary(int libraryId)
         {
-            var books = new List<Book>();
-
-            try
-            {
-                using var conn = new NpgsqlConnection(_connectionString);
-                conn.Open();
-
-                using var cmd = new NpgsqlCommand(
-                    "SELECT id, title, author, authorid, libraryid FROM books WHERE libraryid = @libraryid", conn);
-                cmd.Parameters.AddWithValue("libraryid", libraryId);
-
-                using var reader = cmd.ExecuteReader();
-                while (reader.Read())
-                {
-                    books.Add(new Book
-                    {
-                        Id = reader.GetInt32(0),
-                        Title = reader.GetString(1),
-                        Author = reader.IsDBNull(2) ? null : reader.GetString(2),
-                        AuthorId = reader.GetInt32(3),
-                        LibraryId = reader.IsDBNull(4) ? null : reader.GetInt32(4)
-                    });
-                }
-
-                return Ok(books);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { error = ex.Message });
-            }
+            var books = _bookService.GetBooksByLibrary(libraryId);
+            return Ok(books);
         }
 
         [HttpGet("genres/bybook/{bookId}")]
-        public IActionResult GetGenresByBookId(int bookId)
+        public ActionResult<List<BootcampApp.Models.Genre>> GetGenresByBook(int bookId)
         {
-            try
-            {
-                using var conn = new NpgsqlConnection(_connectionString);
-                conn.Open();
-
-                using var cmd = new NpgsqlCommand(
-                    "SELECT g.id, g.name FROM genres g " +
-                    "JOIN book_genres bg ON g.id = bg.genreid " +
-                    "WHERE bg.bookid = @bookId", conn);
-
-                cmd.Parameters.AddWithValue("bookId", bookId);
-
-                var genres = new List<Genre>();
-
-                using var reader = cmd.ExecuteReader();
-                while (reader.Read())
-                {
-                    genres.Add(new Genre
-                    {
-                        Id = reader.GetInt32(0),
-                        Name = reader.GetString(1),
- 
-                    });
-                }
-
-                return Ok(genres);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
+            var genres = _bookService.GetGenresByBook(bookId);
+            return Ok(genres);
         }
-
-
-
-
     }
 }

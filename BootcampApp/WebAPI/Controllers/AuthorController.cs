@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using BootcampApp.Models;
+using BootcampApp.Service;
 using System.Collections.Generic;
-using System.Linq;
-using static System.Reflection.Metadata.BlobBuilder;
 
 namespace WebAPI.Controllers
 {
@@ -9,91 +9,60 @@ namespace WebAPI.Controllers
     [ApiController]
     public class AuthorController : ControllerBase
     {
-        private static List<Author> authors = new List<Author>
-        {
-            new Author { Id = 1, Name = "Ivo Andrić" },
-            new Author { Id = 2, Name = "Fjodor Dostojevski" }
-        };
+        private readonly IAuthorService _authorService;
 
-        // GET: api/author
+        public AuthorController(IAuthorService authorService)
+        {
+            _authorService = authorService;
+        }
+
         [HttpGet]
         public ActionResult<List<Author>> GetAll()
         {
-            return Ok(authors);
+            return Ok(_authorService.GetAllAuthors());
         }
 
-        // GET: api/author/5
         [HttpGet("{id}")]
         public ActionResult<Author> GetById(int id)
         {
-            var author = authors.FirstOrDefault(a => a.Id == id);
+            var author = _authorService.GetAuthorById(id);
             if (author == null)
-                return NotFound($"Autor sa ID {id} nije pronađen.");
+                return NotFound();
             return Ok(author);
         }
 
-        // POST: api/author
         [HttpPost]
         public ActionResult<Author> Create([FromBody] Author author)
         {
-            if (string.IsNullOrWhiteSpace(author.Name))
-                return BadRequest("Ime autora ne smije biti prazno.");
-
-            if (authors.Any(a => a.Name.ToLower() == author.Name.ToLower()))
-                return Conflict("Autor sa tim imenom već postoji.");
-
-            int newId = authors.Any() ? authors.Max(a => a.Id) + 1 : 1;
-            author.Id = newId;
-            authors.Add(author);
-
-            return CreatedAtAction(nameof(GetById), new { id = author.Id }, author);
+            var created = _authorService.CreateAuthor(author);
+            return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
         }
 
-        // PUT: api/author/5
         [HttpPut("{id}")]
-        public ActionResult Update(int id, [FromBody] Author updatedAuthor)
+        public IActionResult Update(int id, [FromBody] Author author)
         {
-            var existingAuthor = authors.FirstOrDefault(a => a.Id == id);
-            if (existingAuthor == null)
-                return NotFound($"Autor sa ID {id} nije pronađen.");
-
-            if (string.IsNullOrWhiteSpace(updatedAuthor.Name))
-                return BadRequest("Ime autora ne smije biti prazno.");
-
-            if (authors.Any(a => a.Id != id && a.Name.ToLower() == updatedAuthor.Name.ToLower()))
-                return Conflict("Drugi autor sa tim imenom već postoji.");
-
-            existingAuthor.Name = updatedAuthor.Name;
-
+            var updated = _authorService.UpdateAuthor(id, author);
+            if (!updated)
+                return NotFound();
             return NoContent();
         }
 
-        // DELETE: api/author/5
         [HttpDelete("{id}")]
-        public ActionResult Delete(int id)
+        public IActionResult Delete(int id)
         {
-            var author = authors.FirstOrDefault(a => a.Id == id);
-            if (author == null)
-                return NotFound($"Autor sa ID {id} nije pronađen.");
-
-            // Opcionalno: provjera da nema knjiga koje koriste ovog autora
-            var hasBooks = BookController.books.Any(b => b.AuthorId == id);
-            if (hasBooks)
-                return BadRequest("Ne možete obrisati autora koji ima povezane knjige.");
-
-            authors.Remove(author);
+            var deleted = _authorService.DeleteAuthor(id);
+            if (!deleted)
+                return BadRequest("Author cannot be deleted because it has related books.");
             return NoContent();
         }
 
-        [HttpGet("byauthor/{authorId}")]
+        [HttpGet("{authorId}/books")]
         public ActionResult<List<Book>> GetBooksByAuthor(int authorId)
         {
-            var booksByAuthor = BookController.books.Where(b => b.AuthorId == authorId).ToList();
-
-            if (!booksByAuthor.Any())
-                return NotFound($"Nema knjiga za autora sa ID {authorId}.");
-
-            return Ok(booksByAuthor);
+            var books = _authorService.GetBooksByAuthor(authorId);
+            if (books == null || books.Count == 0)
+                return NotFound();
+            return Ok(books);
         }
     }
 }

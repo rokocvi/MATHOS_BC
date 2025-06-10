@@ -1,5 +1,5 @@
-﻿namespace WebAPI.Controllers
-{
+﻿namespace BootcampApp.Models
+{ 
     public class Author
     {
         public int Id { get; set; }

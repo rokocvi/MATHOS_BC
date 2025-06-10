@@ -1,4 +1,4 @@
-﻿namespace WebAPI.Controllers
+﻿namespace BootcampApp.Models
 {
     public partial class BookController
     {
