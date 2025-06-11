@@ -12,6 +12,7 @@ namespace BootcampApp.Service.Interfaces
         Task DeleteBookAsync(int id);
         Task<List<Book>> GetBooksByAuthorAsync(int authorId);
         Task<List<Book>> GetBooksByLibraryAsync(int libraryId);
-        Task<List<Genre>> GetGenresByBookAsync(int bookId);
+        Task<List<Genre>> GetGenresByBookAsync(int bookId, string? nameFilter ,  string? sortBy ,  string? sortDirection , int? page , int? pageSize );
+        Task AddGenresToBookAsync(int bookId, IEnumerable<int> genreIds);
     }
 }

@@ -49,9 +49,14 @@ namespace BootcampApp.Service
             return await _bookRepository.GetBooksByLibraryIdAsync(libraryId);
         }
 
-        public async Task<List<Genre>> GetGenresByBookAsync(int bookId)
+        public async Task<List<Genre>> GetGenresByBookAsync(int bookId,string? nameFilter, string? sortBy ,  string? sortDirection,  int? page, int? pageSize)
         {
-            return await _bookRepository.GetGenresByBookIdAsync(bookId);
+            return await _bookRepository.GetGenresByBookIdAsync(bookId, nameFilter, sortBy, sortDirection, page, pageSize);
+        }
+
+        public async Task AddGenresToBookAsync(int bookId, IEnumerable<int> genreIds)
+        {
+            await _bookRepository.AddGenresToBookAsync(bookId, genreIds);
         }
     }
 }

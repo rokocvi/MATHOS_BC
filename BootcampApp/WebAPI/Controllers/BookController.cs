@@ -87,11 +87,20 @@ namespace WebAPI.Controllers
             return Ok(books);
         }
 
-        [HttpGet("genres/bybook/{bookId}")]
-        public async Task<ActionResult<List<BootcampApp.Models.Genre>>> GetGenresByBookAsync(int bookId)
+        [HttpGet("{bookId}/genres")]
+        public async Task<ActionResult<List<BootcampApp.Models.Genre>>> GetGenresByBookAsync(int bookId, string? nameFilter = null, string? sortBy = null, string? sortDirection = "asc",
+            int? page = null,
+            int? pageSize = null)
         {
-            var genres = await _bookService.GetGenresByBookAsync(bookId);
+            var genres = await _bookService.GetGenresByBookAsync(bookId, nameFilter, sortBy, sortDirection, page, pageSize);
             return Ok(genres);
+        }
+
+        [HttpPost("{id}/genres")]
+        public async Task<IActionResult> AddGenres(int id, [FromBody] List<int> genreIds)
+        {
+            await _bookService.AddGenresToBookAsync(id, genreIds);
+            return NoContent();
         }
     }
 }

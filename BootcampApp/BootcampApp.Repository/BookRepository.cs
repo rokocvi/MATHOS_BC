@@ -310,31 +310,97 @@ namespace BootcampApp.Repository
             return books;
         }
 
-        public async Task<List<Genre>> GetGenresByBookIdAsync(int bookId)
+        public async Task<List<Genre>> GetGenresByBookIdAsync(
+            int bookId,
+            string? nameFilter = null,
+            string? sortBy = null,
+            string? sortDirection = "asc",
+            int? page = null,
+            int? pageSize = null)
         {
+
             var genres = new List<Genre>();
             await using var conn = new NpgsqlConnection(_connectionString);
             await conn.OpenAsync();
 
-            var sql = @"
-            SELECT g.id, g.name
-            FROM genres g
-            JOIN book_genres bg ON g.id = bg.genreid
-            WHERE bg.bookid = @bookId";
+            var sql = new StringBuilder(@"
+                        SELECT 
+                          g.id        AS GenreId,
+                          g.name      AS GenreName
+                        FROM genres g
+                        JOIN book_genres bg ON g.id = bg.genreid
+                        WHERE bg.bookid = @bookId
+                    ");
 
-            await using var cmd = new NpgsqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("@bookId", bookId);
+            // 1) Filtering po imenu žanra
+            var whereClauses = new List<string>();
+            var parameters = new List<NpgsqlParameter>
+    {
+        new NpgsqlParameter("@bookId", bookId)
+    };
+
+            if (!string.IsNullOrWhiteSpace(nameFilter))
+            {
+                whereClauses.Add("LOWER(g.name) LIKE LOWER(@nameFilter)");
+                parameters.Add(new NpgsqlParameter("@nameFilter", $"%{nameFilter}%"));
+            }
+
+            if (whereClauses.Any())
+                sql.Append(" AND " + string.Join(" AND ", whereClauses));
+
+            // 2) Sorting
+            var validSorts = new[] { "GenreId", "GenreName" };
+            if (!string.IsNullOrWhiteSpace(sortBy) && validSorts.Contains(sortBy))
+            {
+                var dir = sortDirection?.ToLower() == "desc" ? "DESC" : "ASC";
+                sql.Append($" ORDER BY {sortBy} {dir}");
+            }
+
+            // 3) Paging
+            if (page.HasValue && pageSize.HasValue)
+            {
+                int offset = (page.Value - 1) * pageSize.Value;
+                sql.Append(" OFFSET @offset LIMIT @limit");
+                parameters.Add(new NpgsqlParameter("@offset", offset));
+                parameters.Add(new NpgsqlParameter("@limit", pageSize.Value));
+            }
+
+            await using var cmd = new NpgsqlCommand(sql.ToString(), conn);
+            cmd.Parameters.AddRange(parameters.ToArray());
 
             await using var reader = await cmd.ExecuteReaderAsync();
+
+            var idIndex = reader.GetOrdinal("GenreId");
+            var nameIndex = reader.GetOrdinal("GenreName");
+
             while (await reader.ReadAsync())
             {
                 genres.Add(new Genre
                 {
-                    Id = reader.GetInt32(0),
-                    Name = reader.GetString(1)
+                    Id = reader.GetInt32(idIndex),
+                    Name = reader.GetString(nameIndex)
                 });
             }
+
             return genres;
+        }
+
+
+        public async Task AddGenresToBookAsync(int bookId, IEnumerable<int> genreIds)
+        {
+            await using var conn = new NpgsqlConnection(_connectionString);
+            await conn.OpenAsync();
+
+            var sql = "INSERT INTO book_genres (bookid, genreid) VALUES (@bookid, @genreid) ON CONFLICT DO NOTHING";
+            await using var cmd = new NpgsqlCommand( sql, conn);
+            cmd.Parameters.Add(new NpgsqlParameter("@bookId", bookId));
+            var genreParam = cmd.Parameters.Add(new NpgsqlParameter("@genreId", DbType.Int32));
+
+            foreach (var gid in genreIds)
+            {
+                genreParam.Value = gid;
+                await cmd.ExecuteNonQueryAsync();
+            }
         }
 
        
