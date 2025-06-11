@@ -18,16 +18,16 @@ namespace WebAPI.Controllers
         }
 
         [HttpGet]
-        public ActionResult<List<Book>> GetBooks()
+        public async Task<ActionResult<List<Book>>> GetBooks()
         {
-            var books = _bookService.GetAllBooks();
+            var books = await _bookService.GetAllBooksAsync();
             return Ok(books);
         }
 
         [HttpGet("{id}")]
-        public ActionResult<Book> GetBook(int id)
+        public async Task<ActionResult<Book>> GetBook(int id)
         {
-            var book = _bookService.GetBook(id);
+            var book = await _bookService.GetBookAsync(id);
             if (book == null)
                 return NotFound();
 
@@ -35,19 +35,19 @@ namespace WebAPI.Controllers
         }
 
         [HttpPost]
-        public ActionResult<Book> AddBook([FromBody] Book newBook)
+        public async Task<ActionResult<Book>> AddBookAsync([FromBody] Book newBook)
         {
             if (newBook == null || string.IsNullOrWhiteSpace(newBook.Title) || string.IsNullOrWhiteSpace(newBook.Author))
                 return BadRequest("Title and Author are required.");
 
-            var addedBook = _bookService.AddBook(newBook);
+            var addedBook = await _bookService.AddBookAsync(newBook);
             return CreatedAtAction(nameof(GetBook), new { id = addedBook.Id }, addedBook);
         }
 
         [HttpPut("{id}")]
         public IActionResult UpdateBook(int id, [FromBody] Book updatedBook)
         {
-            var existingBook = _bookService.GetBook(id);
+            var existingBook = _bookService.GetBookAsync(id);
             if (existingBook == null)
                 return NotFound();
 
@@ -58,7 +58,7 @@ namespace WebAPI.Controllers
         [HttpDelete("{id}")]
         public IActionResult DeleteBook(int id)
         {
-            var existingBook = _bookService.GetBook(id);
+            var existingBook = _bookService.GetBookAsync(id);
             if (existingBook == null)
                 return NotFound();
 

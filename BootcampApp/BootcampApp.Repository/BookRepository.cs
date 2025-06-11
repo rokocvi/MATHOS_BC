@@ -16,14 +16,13 @@ namespace BootcampApp.Repository
             _connectionString = connectionString;
         }
 
-        public List<Book> GetAllBooksFromDb()
+        public async Task<List<Book>> GetAllBooksFromDbAsync()
         {
             var books = new List<Book>();
 
-            using var connection = new NpgsqlConnection(_connectionString);
-            connection.Open();
+           await using var connection = new NpgsqlConnection(_connectionString);
+          await connection.OpenAsync();
 
-            // Ispravljeni SQL: bez WHERE i s aliasima
             string query = @"
         SELECT 
             b.Id AS BookId, 
@@ -35,17 +34,17 @@ namespace BootcampApp.Repository
         FROM Books b
         LEFT JOIN Authors a ON b.AuthorId = a.Id";
 
-            using var command = new NpgsqlCommand(query, connection);
-            using var reader = command.ExecuteReader();
+            await using var command = new NpgsqlCommand(query, connection);
+            await using var reader = command.ExecuteReader();
 
-            // Indeksi prema aliasima
+           
             var bookIdIndex = reader.GetOrdinal("BookId");
             var titleIndex = reader.GetOrdinal("Title");
             var authorIdIndex = reader.GetOrdinal("AuthorId");
             var libraryIdIndex = reader.GetOrdinal("LibraryId");
             var authorNameIndex = reader.GetOrdinal("AuthorName");
 
-            while (reader.Read())
+            while (await reader.ReadAsync())
             {
                 var book = new Book
                 {
@@ -62,21 +61,21 @@ namespace BootcampApp.Repository
             return books;
         }
 
-        public Book GetBookFromDb(int id)
+        public async Task<Book> GetBookFromDbAsync(int id)
         {
-            using var connection = new NpgsqlConnection(_connectionString);
-            connection.Open();
+            await using var connection = new NpgsqlConnection(_connectionString);
+            await connection.OpenAsync();
 
             var query = @"
-        SELECT b.Id, b.Title, b.AuthorId, b.LibraryId, a.Name AS AuthorName
-        FROM books b
-        LEFT JOIN authors a ON b.AuthorId = a.Id
-        WHERE b.Id = @id";
+            SELECT b.Id, b.Title, b.AuthorId, b.LibraryId, a.Name AS AuthorName
+            FROM books b
+            LEFT JOIN authors a ON b.AuthorId = a.Id
+            WHERE b.Id = @id";
 
-            using var command = new NpgsqlCommand(query, connection);
+            await using var command = new NpgsqlCommand(query, connection);
             command.Parameters.AddWithValue("@id", id);
 
-            using var reader = command.ExecuteReader();
+            await using var reader = await command.ExecuteReaderAsync();
 
             var idIndex = reader.GetOrdinal("Id");
             var titleIndex = reader.GetOrdinal("Title");
@@ -84,7 +83,7 @@ namespace BootcampApp.Repository
             var libraryIdIndex = reader.GetOrdinal("LibraryId");
             var authorNameIndex = reader.GetOrdinal("AuthorName");
 
-            if (reader.Read())
+            if (await reader.ReadAsync())
             {
                 return new Book
                 {
@@ -99,26 +98,26 @@ namespace BootcampApp.Repository
             return null;
         }
 
-        public Book AddBookToDb(Book book)
+        public async Task<Book> AddBookToDbAsync(Book book)
         {
-            using var connection = new NpgsqlConnection(_connectionString);
-            connection.Open();
+            await using var connection = new NpgsqlConnection(_connectionString);
+            await connection.OpenAsync();
 
-            using var insertCommand = new NpgsqlCommand(
+           await using var insertCommand = new NpgsqlCommand(
                 "INSERT INTO books (title, authorid, libraryid) VALUES (@title, @aid, @lid) RETURNING id", connection);
 
             insertCommand.Parameters.AddWithValue("@title", book.Title);
             insertCommand.Parameters.AddWithValue("@aid", book.AuthorId);
             insertCommand.Parameters.AddWithValue("@lid", book.LibraryId);
 
-            var id = (int)insertCommand.ExecuteScalar();
-            book.Id = id;
+            var idObj = await insertCommand.ExecuteScalarAsync();
+            book.Id = Convert.ToInt32(idObj);
 
-            
+
             using var authorCommand = new NpgsqlCommand("SELECT name FROM authors WHERE id = @id", connection);
             authorCommand.Parameters.AddWithValue("@id", book.AuthorId);
 
-            var authorNameObj = authorCommand.ExecuteScalar();
+            var authorNameObj = await authorCommand.ExecuteScalarAsync();
             book.Author = authorNameObj != null ? authorNameObj.ToString() : null;
 
             return book;
@@ -161,16 +160,16 @@ namespace BootcampApp.Repository
             connection.Open();
 
             string query = @"
-SELECT 
-    b.Id AS BookId, 
-    b.Title, 
-    b.AuthorId, 
-    b.LibraryId,
-    a.Id AS AuthorDbId, 
-    a.Name AS AuthorName
-FROM Books b
-LEFT JOIN Authors a ON b.AuthorId = a.Id
-WHERE b.AuthorId = @authorId";
+            SELECT 
+                b.Id AS BookId, 
+                b.Title, 
+                b.AuthorId, 
+                b.LibraryId,
+                a.Id AS AuthorDbId, 
+                a.Name AS AuthorName
+            FROM Books b
+            LEFT JOIN Authors a ON b.AuthorId = a.Id
+            WHERE b.AuthorId = @authorId";
 
             using var command = new NpgsqlCommand(query, connection);
             command.Parameters.AddWithValue("@authorId", authorId);

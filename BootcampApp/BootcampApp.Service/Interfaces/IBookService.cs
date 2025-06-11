@@ -5,9 +5,9 @@ namespace BootcampApp.Service.Interfaces
 {
     public interface IBookService
     {
-        List<Book> GetAllBooks();
-        Book GetBook(int id);
-        Book AddBook(Book book);
+        Task<List<Book>> GetAllBooksAsync();
+        Task<Book> GetBookAsync(int id);
+        Task<Book> AddBookAsync(Book book);
         void UpdateBook(int id, Book book);
         void DeleteBook(int id);
         List<Book> GetBooksByAuthor(int authorId);

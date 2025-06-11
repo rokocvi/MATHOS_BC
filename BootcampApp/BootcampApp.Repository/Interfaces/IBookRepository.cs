@@ -5,9 +5,9 @@ namespace BootcampApp.Repository.Interfaces
 {
     public interface IBookRepository
     {
-        List<Book> GetAllBooksFromDb();
-        Book GetBookFromDb(int id);
-        Book AddBookToDb(Book book);
+        Task<List<Book>> GetAllBooksFromDbAsync();
+        Task<Book> GetBookFromDbAsync(int id);
+        Task<Book> AddBookToDbAsync(Book book);
         void UpdateBookInDb(int id, Book book);
         void DeleteBookFromDb(int id);
         List<Book> GetBooksByAuthorId(int authorId);

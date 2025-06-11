@@ -14,19 +14,19 @@ namespace BootcampApp.Service
             _bookRepository = bookRepository;
         }
 
-        public List<Book> GetAllBooks()
+        public async Task<List<Book>> GetAllBooksAsync()
         {
-            return _bookRepository.GetAllBooksFromDb();
+            return await _bookRepository.GetAllBooksFromDbAsync();
         }
 
-        public Book GetBook(int id)
+        public async  Task<Book> GetBookAsync(int id)
         {
-            return _bookRepository.GetBookFromDb(id);
+            return await _bookRepository.GetBookFromDbAsync(id);
         }
 
-        public Book AddBook(Book book)
+        public async Task<Book> AddBookAsync(Book book)
         {
-            return _bookRepository.AddBookToDb(book);
+            return await _bookRepository.AddBookToDbAsync(book);
         }
 
         public void UpdateBook(int id, Book book)
