@@ -57,7 +57,6 @@ namespace BootcampApp.Repository
                 queryBuilder.Append(" WHERE " + string.Join(" AND ", whereClauses));
             }
 
-            // Validacija i dodavanje sortiranja
             var validSorts = new[] { "title", "authorid", "libraryid" };
             if (!string.IsNullOrWhiteSpace(sortBy) && validSorts.Contains(sortBy.ToLower()))
             {
@@ -183,7 +182,7 @@ namespace BootcampApp.Repository
             await using var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync();
 
-            // 1. Provjeri postoji li autor s tim ID-em
+            
             await using (var checkAuthorCmd = new NpgsqlCommand("SELECT name FROM authors WHERE id = @id", connection))
             {
                 checkAuthorCmd.Parameters.AddWithValue("@id", book.AuthorId);
@@ -191,7 +190,7 @@ namespace BootcampApp.Repository
 
                 if (result == null)
                 {
-                    // 2. Ako autor NE postoji – umetni ga
+                    
                     await using var insertAuthorCmd = new NpgsqlCommand("INSERT INTO authors (id, name) VALUES (@id, @name)", connection);
                     insertAuthorCmd.Parameters.AddWithValue("@id", book.AuthorId);
                     insertAuthorCmd.Parameters.AddWithValue("@name", book.Author);
@@ -199,7 +198,7 @@ namespace BootcampApp.Repository
                 }
                 else
                 {
-                    // 3. Ako autor POSTOJI – ažuriraj ime ako je promijenjeno
+                   
                     var existingName = result.ToString();
                     if (existingName != book.Author)
                     {
@@ -211,7 +210,7 @@ namespace BootcampApp.Repository
                 }
             }
 
-            // 4. Ažuriraj knjigu
+            
             await using var command = new NpgsqlCommand(
                 @"UPDATE books 
           SET title = @title, authorid = @aid, author = @aname, libraryid = @lid 
@@ -314,19 +313,19 @@ namespace BootcampApp.Repository
         public async Task<List<Genre>> GetGenresByBookIdAsync(int bookId)
         {
             var genres = new List<Genre>();
+            await using var conn = new NpgsqlConnection(_connectionString);
+            await conn.OpenAsync();
 
-            await using var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync();
+            var sql = @"
+            SELECT g.id, g.name
+            FROM genres g
+            JOIN book_genres bg ON g.id = bg.genreid
+            WHERE bg.bookid = @bookId";
 
-            using var command = new NpgsqlCommand(
-                @"SELECT g.id, g.name 
-                  FROM genres g 
-                  INNER JOIN book_genres bg ON g.id = bg.genreid 
-                  WHERE bg.bookid = @bid", connection);
+            await using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@bookId", bookId);
 
-            command.Parameters.AddWithValue("@bid", bookId);
-
-            await using var reader = await command.ExecuteReaderAsync();
+            await using var reader = await cmd.ExecuteReaderAsync();
             while (await reader.ReadAsync())
             {
                 genres.Add(new Genre
@@ -335,8 +334,9 @@ namespace BootcampApp.Repository
                     Name = reader.GetString(1)
                 });
             }
-
             return genres;
         }
+
+       
     }
 }

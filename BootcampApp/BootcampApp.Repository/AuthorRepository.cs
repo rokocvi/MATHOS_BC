@@ -18,14 +18,15 @@ namespace BootcampApp.Repository
 
         private NpgsqlConnection GetConnection() => new NpgsqlConnection(_connectionString);
 
-        public List<Author> GetAll()
+        public async Task<List<Author>> GetAllAsync()
         {
             var authors = new List<Author>();
-            using var conn = GetConnection();
-            conn.Open();
-            using var cmd = new NpgsqlCommand("SELECT id, name FROM authors", conn);
-            using var reader = cmd.ExecuteReader();
-            while (reader.Read())
+            await using var conn = GetConnection();
+            await conn.OpenAsync();
+            await using var cmd = new NpgsqlCommand("SELECT id, name FROM authors", conn);
+            await using var reader = cmd.ExecuteReader();
+
+            while (await reader.ReadAsync())
             {
                 authors.Add(new Author
                 {
@@ -36,14 +37,14 @@ namespace BootcampApp.Repository
             return authors;
         }
 
-        public Author GetById(int id)
+        public async Task<Author> GetByIdAsync(int id)
         {
-            using var conn = GetConnection();
-            conn.Open();
-            using var cmd = new NpgsqlCommand("SELECT id, name FROM authors WHERE id = @id", conn);
+            await using var conn = GetConnection();
+            await conn.OpenAsync();
+            await using var cmd = new NpgsqlCommand("SELECT id, name FROM authors WHERE id = @id", conn);
             cmd.Parameters.AddWithValue("id", id);
-            using var reader = cmd.ExecuteReader();
-            if (reader.Read())
+            await using var reader = cmd.ExecuteReader();
+            if (await reader.ReadAsync())
             {
                 return new Author
                 {
@@ -54,21 +55,21 @@ namespace BootcampApp.Repository
             return null;
         }
 
-        public Author Create(Author author)
+        public async Task<Author> CreateAsync(Author author)
         {
-            using var conn = GetConnection();
-            conn.Open();
-            using var cmd = new NpgsqlCommand("INSERT INTO authors (name) VALUES (@name) RETURNING id", conn);
+            await using var conn = GetConnection();
+            await conn.OpenAsync();
+            await using var cmd = new NpgsqlCommand("INSERT INTO authors (name) VALUES (@name) RETURNING id", conn);
             cmd.Parameters.AddWithValue("name", author.Name);
             author.Id = (int)cmd.ExecuteScalar();
             return author;
         }
 
-        public bool Update(int id, Author author)
+        public async Task<bool> UpdateAsync(int id, Author author)
         {
-            using var conn = GetConnection();
-            conn.Open();
-            using var cmd = new NpgsqlCommand("UPDATE authors SET name = @name WHERE id = @id", conn);
+            await using var conn = GetConnection();
+            await conn.OpenAsync();
+            await using var cmd = new NpgsqlCommand("UPDATE authors SET name = @name WHERE id = @id", conn);
             cmd.Parameters.AddWithValue("name", author.Name);
             cmd.Parameters.AddWithValue("id", id);
             return cmd.ExecuteNonQuery() > 0;

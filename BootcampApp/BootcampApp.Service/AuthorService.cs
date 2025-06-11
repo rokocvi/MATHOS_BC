@@ -13,10 +13,10 @@ namespace BootcampApp.Service
             _repository = repository;
         }
 
-        public List<Author> GetAllAuthors() => _repository.GetAll();
-        public Author GetAuthorById(int id) => _repository.GetById(id);
-        public Author CreateAuthor(Author author) => _repository.Create(author);
-        public bool UpdateAuthor(int id, Author author) => _repository.Update(id, author);
+        public  Task<List<Author>> GetAllAuthors() => _repository.GetAllAsync();
+        public Task<Author> GetAuthorByIdAsync(int id) => _repository.GetByIdAsync(id);
+        public Task<Author> CreateAuthorAsync(Author author) => _repository.CreateAsync(author);
+        public Task<bool> UpdateAuthorAsync(int id, Author author) => _repository.UpdateAsync(id, author);
         public bool DeleteAuthor(int id) => _repository.Delete(id);
         public List<Book> GetBooksByAuthor(int authorId) => _repository.GetBooksByAuthor(authorId);
     }

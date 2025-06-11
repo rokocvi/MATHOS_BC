@@ -25,7 +25,7 @@ namespace WebAPI.Controllers
         [HttpGet("{id}")]
         public ActionResult<Author> GetById(int id)
         {
-            var author = _authorService.GetAuthorById(id);
+            var author = _authorService.GetAuthorByIdAsync(id);
             if (author == null)
                 return NotFound();
             return Ok(author);
@@ -34,16 +34,15 @@ namespace WebAPI.Controllers
         [HttpPost]
         public ActionResult<Author> Create([FromBody] Author author)
         {
-            var created = _authorService.CreateAuthor(author);
+            var created = _authorService.CreateAuthorAsync(author);
             return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
         }
 
         [HttpPut("{id}")]
         public IActionResult Update(int id, [FromBody] Author author)
         {
-            var updated = _authorService.UpdateAuthor(id, author);
-            if (!updated)
-                return NotFound();
+            var updated = _authorService.UpdateAuthorAsync(id, author);
+            
             return NoContent();
         }
 

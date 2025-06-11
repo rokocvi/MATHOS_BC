@@ -5,10 +5,10 @@ namespace BootcampApp.Repository
 {
     public interface IAuthorRepository
     {
-        List<Author> GetAll();
-        Author GetById(int id);
-        Author Create(Author author);
-        bool Update(int id, Author author);
+        Task<List<Author>> GetAllAsync();
+        Task<Author> GetByIdAsync(int id);
+        Task<Author> CreateAsync(Author author);
+        Task<bool> UpdateAsync(int id, Author author);
         bool Delete(int id);
         List<Book> GetBooksByAuthor(int authorId);
     }

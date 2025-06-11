@@ -5,10 +5,10 @@ namespace BootcampApp.Service
 {
     public interface IAuthorService
     {
-        List<Author> GetAllAuthors();
-        Author GetAuthorById(int id);
-        Author CreateAuthor(Author author);
-        bool UpdateAuthor(int id, Author author);
+        Task<List<Author>> GetAllAuthors();
+        Task<Author> GetAuthorByIdAsync(int id);
+        Task<Author> CreateAuthorAsync(Author author);
+        Task<bool> UpdateAuthorAsync(int id, Author author);
         bool DeleteAuthor(int id);
         List<Book> GetBooksByAuthor(int authorId);
     }
