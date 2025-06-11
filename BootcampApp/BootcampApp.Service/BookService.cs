@@ -14,9 +14,9 @@ namespace BootcampApp.Service
             _bookRepository = bookRepository;
         }
 
-        public async Task<List<Book>> GetAllBooksAsync()
+        public async Task<List<Book>> GetAllBooksAsync(string? filter, string? sort, string? dir, int? page, int? size)
         {
-            return await _bookRepository.GetAllBooksFromDbAsync();
+            return await _bookRepository.GetAllBooksFromDbAsync(filter, sort, dir, page, size);
         }
 
         public async  Task<Book> GetBookAsync(int id)
@@ -29,29 +29,29 @@ namespace BootcampApp.Service
             return await _bookRepository.AddBookToDbAsync(book);
         }
 
-        public void UpdateBook(int id, Book book)
+        public async Task UpdateBookAsync(int id, Book book)
         {
-            _bookRepository.UpdateBookInDb(id, book);
+            await _bookRepository.UpdateBookInDbAsync(id, book);
         }
 
-        public void DeleteBook(int id)
+        public async Task DeleteBookAsync(int id)
         {
-            _bookRepository.DeleteBookFromDb(id);
+            await _bookRepository.DeleteBookFromDbAsync(id);
         }
 
-        public List<Book> GetBooksByAuthor(int authorId)
+        public async Task<List<Book>> GetBooksByAuthorAsync(int authorId)
         {
-            return _bookRepository.GetBooksByAuthorId(authorId);
+            return await _bookRepository.GetBooksByAuthorIdAsync(authorId);
         }
 
-        public List<Book> GetBooksByLibrary(int libraryId)
+        public async Task<List<Book>> GetBooksByLibraryAsync(int libraryId)
         {
-            return _bookRepository.GetBooksByLibraryId(libraryId);
+            return await _bookRepository.GetBooksByLibraryIdAsync(libraryId);
         }
 
-        public List<Genre> GetGenresByBook(int bookId)
+        public async Task<List<Genre>> GetGenresByBookAsync(int bookId)
         {
-            return _bookRepository.GetGenresByBookId(bookId);
+            return await _bookRepository.GetGenresByBookIdAsync(bookId);
         }
     }
 }

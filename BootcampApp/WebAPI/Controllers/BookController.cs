@@ -18,9 +18,13 @@ namespace WebAPI.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<Book>>> GetBooks()
+        public async Task<ActionResult<List<Book>>> GetBooks(string? titleFilter = null,
+            string? sortBy = null,
+            string? sortDirection = "asc",
+            int? page = null,
+            int? pageSize = null)
         {
-            var books = await _bookService.GetAllBooksAsync();
+            var books = await _bookService.GetAllBooksAsync(titleFilter, sortBy, sortDirection, page, pageSize);
             return Ok(books);
         }
 
@@ -45,31 +49,31 @@ namespace WebAPI.Controllers
         }
 
         [HttpPut("{id}")]
-        public IActionResult UpdateBook(int id, [FromBody] Book updatedBook)
+        public async Task<IActionResult> UpdateBookAsync(int id, [FromBody] Book updatedBook)
         {
-            var existingBook = _bookService.GetBookAsync(id);
+            var existingBook = await _bookService.GetBookAsync(id);
             if (existingBook == null)
                 return NotFound();
 
-            _bookService.UpdateBook(id, updatedBook);
+            await _bookService.UpdateBookAsync(id, updatedBook);
             return NoContent();
         }
 
         [HttpDelete("{id}")]
-        public IActionResult DeleteBook(int id)
+        public async  Task<IActionResult> DeleteBookAsync(int id)
         {
-            var existingBook = _bookService.GetBookAsync(id);
+            var existingBook = await _bookService.GetBookAsync(id);
             if (existingBook == null)
                 return NotFound();
 
-            _bookService.DeleteBook(id);
+           await _bookService.DeleteBookAsync(id);
             return NoContent();
         }
 
         [HttpGet("author/{authorId}/books")]
-        public ActionResult<List<Book>> GetBooksByAuthor(int authorId)
+        public async Task<ActionResult<List<Book>>> GetBooksByAuthorAsync(int authorId)
         {
-            var books = _bookService.GetBooksByAuthor(authorId);
+            var books = await _bookService.GetBooksByAuthorAsync(authorId);
             if (books == null || books.Count == 0)
                 return NotFound($"No books found for author with ID {authorId}.");
 
@@ -77,16 +81,16 @@ namespace WebAPI.Controllers
         }
 
         [HttpGet("library/{libraryId}/books")]
-        public ActionResult<List<Book>> GetBooksByLibrary(int libraryId)
+        public async Task<ActionResult<List<Book>>> GetBooksByLibraryAsync(int libraryId)
         {
-            var books = _bookService.GetBooksByLibrary(libraryId);
+            var books = await _bookService.GetBooksByLibraryAsync(libraryId);
             return Ok(books);
         }
 
         [HttpGet("genres/bybook/{bookId}")]
-        public ActionResult<List<BootcampApp.Models.Genre>> GetGenresByBook(int bookId)
+        public async Task<ActionResult<List<BootcampApp.Models.Genre>>> GetGenresByBookAsync(int bookId)
         {
-            var genres = _bookService.GetGenresByBook(bookId);
+            var genres = await _bookService.GetGenresByBookAsync(bookId);
             return Ok(genres);
         }
     }

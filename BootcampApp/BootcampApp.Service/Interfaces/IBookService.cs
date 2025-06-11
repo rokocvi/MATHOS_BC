@@ -5,13 +5,13 @@ namespace BootcampApp.Service.Interfaces
 {
     public interface IBookService
     {
-        Task<List<Book>> GetAllBooksAsync();
+        Task<List<Book>> GetAllBooksAsync(string? filter, string? sort, string? dir, int? page, int? size);
         Task<Book> GetBookAsync(int id);
         Task<Book> AddBookAsync(Book book);
-        void UpdateBook(int id, Book book);
-        void DeleteBook(int id);
-        List<Book> GetBooksByAuthor(int authorId);
-        List<Book> GetBooksByLibrary(int libraryId);
-        List<Genre> GetGenresByBook(int bookId);
+        Task UpdateBookAsync(int id, Book book);
+        Task DeleteBookAsync(int id);
+        Task<List<Book>> GetBooksByAuthorAsync(int authorId);
+        Task<List<Book>> GetBooksByLibraryAsync(int libraryId);
+        Task<List<Genre>> GetGenresByBookAsync(int bookId);
     }
 }
