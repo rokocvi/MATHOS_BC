@@ -1,4 +1,4 @@
-﻿using BootcampApp.Models;
+﻿using BootcampApp.Models;   
 using Npgsql;
 using static BootcampApp.Models.BookController;
 using Microsoft.Extensions.Configuration;
@@ -36,6 +36,7 @@ namespace BootcampApp.Repository
             b.Title, 
             b.AuthorId, 
             b.LibraryId,
+            b.rating,
             a.Name AS AuthorName,
             g.Id AS GenreId,
             g.Name AS GenreName
@@ -92,6 +93,7 @@ namespace BootcampApp.Repository
                         AuthorId = reader.GetInt32(reader.GetOrdinal("AuthorId")),
                         LibraryId = reader.GetInt32(reader.GetOrdinal("LibraryId")),
                         Author = reader.IsDBNull(reader.GetOrdinal("AuthorName")) ? null : reader.GetString(reader.GetOrdinal("AuthorName")),
+                        rating = reader.GetDouble(reader.GetOrdinal("rating")),
                         Genres = new List<Genre>()
                     };
                     books.Add(bookId, book);
@@ -112,15 +114,29 @@ namespace BootcampApp.Repository
         }
 
 
-        public async Task<Book> GetBookFromDbAsync(int id)
+
+
+        public async Task<Book?> GetBookFromDbAsync(int id)
         {
+            var books = new Dictionary<int, Book>();
+
             await using var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync();
 
             var query = @"
-            SELECT b.Id, b.Title, b.AuthorId, b.LibraryId, a.Name AS AuthorName
-            FROM books b
-            LEFT JOIN authors a ON b.AuthorId = a.Id
+            SELECT 
+                b.Id AS BookId, 
+                b.Title, 
+                b.AuthorId, 
+                b.LibraryId,
+                b.rating,
+                a.Name AS AuthorName,
+                g.Id AS GenreId,
+                g.Name AS GenreName
+            FROM Books b
+            LEFT JOIN Authors a ON b.AuthorId = a.Id
+            LEFT JOIN book_genres bg ON b.Id = bg.bookid
+            LEFT JOIN genres g ON bg.genreid = g.id
             WHERE b.Id = @id";
 
             await using var command = new NpgsqlCommand(query, connection);
@@ -128,26 +144,39 @@ namespace BootcampApp.Repository
 
             await using var reader = await command.ExecuteReaderAsync();
 
-            var idIndex = reader.GetOrdinal("Id");
-            var titleIndex = reader.GetOrdinal("Title");
-            var authorIdIndex = reader.GetOrdinal("AuthorId");
-            var libraryIdIndex = reader.GetOrdinal("LibraryId");
-            var authorNameIndex = reader.GetOrdinal("AuthorName");
-
-            if (await reader.ReadAsync())
+            while (await reader.ReadAsync())
             {
-                return new Book
+                var bookId = reader.GetInt32(reader.GetOrdinal("BookId"));
+
+                if (!books.TryGetValue(bookId, out var book))
                 {
-                    Id = reader.GetInt32(idIndex),
-                    Title = reader.GetString(titleIndex),
-                    AuthorId = reader.GetInt32(authorIdIndex),
-                    LibraryId = reader.GetInt32(libraryIdIndex),
-                    Author = !reader.IsDBNull(authorNameIndex) ? reader.GetString(authorNameIndex) : null
-                };
+                    book = new Book
+                    {
+                        Id = bookId,
+                        Title = reader.GetString(reader.GetOrdinal("Title")),
+                        AuthorId = reader.GetInt32(reader.GetOrdinal("AuthorId")),
+                        LibraryId = reader.GetInt32(reader.GetOrdinal("LibraryId")),
+                        Author = reader.IsDBNull(reader.GetOrdinal("AuthorName")) ? null : reader.GetString(reader.GetOrdinal("AuthorName")),
+                        rating = reader.IsDBNull(reader.GetOrdinal("rating")) ? null : (double?)reader.GetDouble(reader.GetOrdinal("rating")),
+                        Genres = new List<Genre>()
+                    };
+                    books.Add(bookId, book);
+                }
+
+                if (!reader.IsDBNull(reader.GetOrdinal("GenreId")))
+                {
+                    var genre = new Genre
+                    {
+                        Id = reader.GetInt32(reader.GetOrdinal("GenreId")),
+                        Name = reader.GetString(reader.GetOrdinal("GenreName"))
+                    };
+                    book.Genres.Add(genre);
+                }
             }
 
-            return null;
+            return books.Values.FirstOrDefault();
         }
+
 
         public async Task<Book> AddBookToDbAsync(Book book)
         {

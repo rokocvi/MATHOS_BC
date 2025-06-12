@@ -12,5 +12,6 @@ namespace BootcampApp.Models
         public int AuthorId {  get; set; }
         public int? LibraryId { get; set; }
         public List<Genre>? Genres { get; set; }
+        public double? rating { get; set; }
     }
 }
