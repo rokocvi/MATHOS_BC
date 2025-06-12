@@ -183,13 +183,12 @@ namespace BootcampApp.Repository
             await using var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync();
 
-            // 1. Provjeri postoji li autor u authors tablici
             await using (var checkAuthorCmd = new NpgsqlCommand("SELECT COUNT(*) FROM authors WHERE id = @id", connection))
             {
                 checkAuthorCmd.Parameters.AddWithValue("@id", book.AuthorId);
                 var authorExists = (long)await checkAuthorCmd.ExecuteScalarAsync();
 
-                // 2. Ako autor ne postoji – ubaci ga
+                
                 if (authorExists == 0)
                 {
                     await using var insertAuthorCmd = new NpgsqlCommand("INSERT INTO authors (id, name) VALUES (@id, @name)", connection);
@@ -199,7 +198,6 @@ namespace BootcampApp.Repository
                 }
             }
 
-            // 3. Ubaci knjigu u books tablicu
             await using var insertBookCmd = new NpgsqlCommand(
                 @"INSERT INTO books (title, authorid, author, libraryid) 
           VALUES (@title, @aid, @author, @lid)
@@ -254,13 +252,14 @@ namespace BootcampApp.Repository
             
             await using var command = new NpgsqlCommand(
                 @"UPDATE books 
-          SET title = @title, authorid = @aid, author = @aname, libraryid = @lid 
+          SET title = @title, authorid = @aid, author = @aname, libraryid = @lid ,rating = @rating
           WHERE id = @id", connection);
 
             command.Parameters.AddWithValue("@title", book.Title);
             command.Parameters.AddWithValue("@aid", book.AuthorId);
             command.Parameters.AddWithValue("@aname", book.Author);
             command.Parameters.AddWithValue("@lid", book.LibraryId);
+            command.Parameters.AddWithValue("@rating", book.rating);
             command.Parameters.AddWithValue("@id", id);
 
             await command.ExecuteNonQueryAsync();
@@ -332,20 +331,64 @@ namespace BootcampApp.Repository
             await using var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync();
 
-            await using var command = new NpgsqlCommand("SELECT * FROM books WHERE libraryid = @lid", connection);
-            command.Parameters.AddWithValue("@lid", libraryId);
+            // 1. Prvo dohvatimo sve knjige iz biblioteke
+            var bookQuery = @"
+        SELECT Id, Title, AuthorId, Author, LibraryId, Rating
+        FROM books
+        WHERE libraryid = @lid";
 
-            await using var reader = await command.ExecuteReaderAsync();
+            await using var bookCommand = new NpgsqlCommand(bookQuery, connection);
+            bookCommand.Parameters.AddWithValue("@lid", libraryId);
+
+            var bookMap = new Dictionary<int, Book>();
+
+            await using var reader = await bookCommand.ExecuteReaderAsync();
             while (await reader.ReadAsync())
             {
-                books.Add(new Book
+                var book = new Book
                 {
                     Id = reader.GetInt32(0),
                     Title = reader.GetString(1),
                     AuthorId = reader.GetInt32(2),
                     Author = reader.GetString(3),
-                    LibraryId = reader.GetInt32(4)
-                });
+                    LibraryId = reader.GetInt32(4),
+                    rating = reader.IsDBNull(5) ? 0.0 : reader.GetDouble(5),
+                    Genres = new List<Genre>() // inicijaliziraj prazno
+                };
+
+                books.Add(book);
+                bookMap[book.Id] = book;
+            }
+
+            await reader.CloseAsync();
+
+            // 2. Sada dohvatimo sve žanrove za te knjige
+            if (bookMap.Count > 0)
+            {
+                var bookIds = string.Join(",", bookMap.Keys);
+                var genreQuery = $@"
+            SELECT bg.bookid, g.id, g.name
+            FROM book_genres bg
+            JOIN genres g ON g.id = bg.genreid
+            WHERE bg.bookid IN ({bookIds})";
+
+                await using var genreCommand = new NpgsqlCommand(genreQuery, connection);
+                await using var genreReader = await genreCommand.ExecuteReaderAsync();
+
+                while (await genreReader.ReadAsync())
+                {
+                    var bookId = genreReader.GetInt32(0);
+                    var genre = new Genre
+                    {
+                        Id = genreReader.GetInt32(1),
+                        Name = genreReader.GetString(2)
+                    };
+
+                    if (bookMap.TryGetValue(bookId, out var book))
+                    {
+                        book.Genres.Add(genre);
+                    }
+                }
             }
 
             return books;
