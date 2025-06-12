@@ -1,6 +1,8 @@
 ﻿using BootcampApp.Models;
 using BootcampApp.Repository;
 using System.Collections.Generic;
+using BootcampApp.Service.Common;
+using BootcampApp.Repository.Common;
 
 namespace BootcampApp.Service
 {

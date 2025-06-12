@@ -1,7 +1,11 @@
 ﻿using BootcampApp.Models;
+using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
-namespace BootcampApp.Repository
+namespace BootcampApp.Repository.Common
 {
     public interface IAuthorRepository
     {

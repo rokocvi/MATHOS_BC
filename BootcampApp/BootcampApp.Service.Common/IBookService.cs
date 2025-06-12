@@ -1,7 +1,11 @@
-﻿using BootcampApp.Models;
-using static BootcampApp.Models.BookController;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using BootcampApp.Models;
 
-namespace BootcampApp.Service.Interfaces
+namespace BootcampApp.Service.Common
 {
     public interface IBookService
     {
@@ -12,7 +16,7 @@ namespace BootcampApp.Service.Interfaces
         Task DeleteBookAsync(int id);
         Task<List<Book>> GetBooksByAuthorAsync(int authorId);
         Task<List<Book>> GetBooksByLibraryAsync(int libraryId);
-        Task<List<Genre>> GetGenresByBookAsync(int bookId, string? nameFilter ,  string? sortBy ,  string? sortDirection , int? page , int? pageSize );
+        Task<List<Genre>> GetGenresByBookAsync(int bookId, string? nameFilter, string? sortBy, string? sortDirection, int? page, int? pageSize);
         Task AddGenresToBookAsync(int bookId, IEnumerable<int> genreIds);
     }
 }

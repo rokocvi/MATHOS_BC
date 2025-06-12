@@ -4,6 +4,7 @@ using Npgsql;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using BootcampApp.Repository.Common;
 
 namespace BootcampApp.Repository
 {

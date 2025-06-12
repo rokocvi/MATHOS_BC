@@ -1,7 +1,6 @@
 ﻿using BootcampApp.Models;
-using static BootcampApp.Models.BookController;
 
-namespace BootcampApp.Repository.Interfaces
+namespace BootcampApp.Repository.Common
 {
     public interface IBookRepository
     {
@@ -16,7 +15,7 @@ namespace BootcampApp.Repository.Interfaces
         Task DeleteBookFromDbAsync(int id);
         Task<List<Book>> GetBooksByAuthorIdAsync(int authorId);
         Task<List<Book>> GetBooksByLibraryIdAsync(int libraryId);
-        Task<List<Genre>> GetGenresByBookIdAsync(int bookId, string? nameFilter = null,string? sortBy = null, string? sortDirection = "asc", int? page = null, int? pageSize = null);
+        Task<List<Genre>> GetGenresByBookIdAsync(int bookId, string? nameFilter = null, string? sortBy = null, string? sortDirection = "asc", int? page = null, int? pageSize = null);
         Task AddGenresToBookAsync(int bookId, IEnumerable<int> genreIds);
     }
 }

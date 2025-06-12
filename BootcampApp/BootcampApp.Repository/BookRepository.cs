@@ -1,10 +1,11 @@
 ﻿using BootcampApp.Models;
-using BootcampApp.Repository.Interfaces;
 using Npgsql;
 using static BootcampApp.Models.BookController;
 using Microsoft.Extensions.Configuration;
 using System.Data;
 using System.Text;
+using BootcampApp.Repository.Common;
+using BootcampApp.Service.Common;
 
 namespace BootcampApp.Repository
 {
@@ -18,34 +19,35 @@ namespace BootcampApp.Repository
         }
 
         public async Task<List<Book>> GetAllBooksFromDbAsync(
-            string? titleFilter = null,
-            string? sortBy = null,
-            string? sortDirection = "asc",
-            int? page = null,
-            int? pageSize = null)
-
+    string? titleFilter = null,
+    string? sortBy = null,
+    string? sortDirection = "asc",
+    int? page = null,
+    int? pageSize = null)
         {
-            var books = new List<Book>();
+            var books = new Dictionary<int, Book>();
 
             await using var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync();
 
             var queryBuilder = new StringBuilder(@"
-                SELECT 
-                    b.Id AS BookId, 
-                    b.Title, 
-                    b.AuthorId, 
-                    b.LibraryId,
-                    a.Id AS AuthorDbId, 
-                    a.Name AS AuthorName
-                FROM Books b
-                LEFT JOIN Authors a ON b.AuthorId = a.Id
-            ");
+        SELECT 
+            b.Id AS BookId, 
+            b.Title, 
+            b.AuthorId, 
+            b.LibraryId,
+            a.Name AS AuthorName,
+            g.Id AS GenreId,
+            g.Name AS GenreName
+        FROM Books b
+        LEFT JOIN Authors a ON b.AuthorId = a.Id
+        LEFT JOIN book_genres bg ON b.Id = bg.bookid
+        LEFT JOIN genres g ON bg.genreid = g.id
+    ");
 
             var whereClauses = new List<string>();
             var parameters = new List<NpgsqlParameter>();
 
-            
             if (!string.IsNullOrWhiteSpace(titleFilter))
             {
                 whereClauses.Add("LOWER(b.Title) LIKE LOWER(@titleFilter)");
@@ -64,7 +66,6 @@ namespace BootcampApp.Repository
                 queryBuilder.Append($" ORDER BY b.{sortBy} {dir}");
             }
 
-            // Paging
             if (page.HasValue && pageSize.HasValue)
             {
                 int offset = (page.Value - 1) * pageSize.Value;
@@ -78,25 +79,36 @@ namespace BootcampApp.Repository
 
             await using var reader = await command.ExecuteReaderAsync();
 
-            var bookIdIndex = reader.GetOrdinal("BookId");
-            var titleIndex = reader.GetOrdinal("Title");
-            var authorIdIndex = reader.GetOrdinal("AuthorId");
-            var libraryIdIndex = reader.GetOrdinal("LibraryId");
-            var authorNameIndex = reader.GetOrdinal("AuthorName");
-
             while (await reader.ReadAsync())
             {
-                books.Add(new Book
+                var bookId = reader.GetInt32(reader.GetOrdinal("BookId"));
+
+                if (!books.TryGetValue(bookId, out var book))
                 {
-                    Id = reader.GetInt32(bookIdIndex),
-                    Title = reader.GetString(titleIndex),
-                    AuthorId = reader.GetInt32(authorIdIndex),
-                    LibraryId = reader.GetInt32(libraryIdIndex),
-                    Author = reader.IsDBNull(authorNameIndex) ? null : reader.GetString(authorNameIndex)
-                });
+                    book = new Book
+                    {
+                        Id = bookId,
+                        Title = reader.GetString(reader.GetOrdinal("Title")),
+                        AuthorId = reader.GetInt32(reader.GetOrdinal("AuthorId")),
+                        LibraryId = reader.GetInt32(reader.GetOrdinal("LibraryId")),
+                        Author = reader.IsDBNull(reader.GetOrdinal("AuthorName")) ? null : reader.GetString(reader.GetOrdinal("AuthorName")),
+                        Genres = new List<Genre>()
+                    };
+                    books.Add(bookId, book);
+                }
+
+                if (!reader.IsDBNull(reader.GetOrdinal("GenreId")))
+                {
+                    var genre = new Genre
+                    {
+                        Id = reader.GetInt32(reader.GetOrdinal("GenreId")),
+                        Name = reader.GetString(reader.GetOrdinal("GenreName"))
+                    };
+                    book.Genres.Add(genre);
+                }
             }
 
-            return books;
+            return books.Values.ToList();
         }
 
 
@@ -366,7 +378,7 @@ namespace BootcampApp.Repository
             }
 
             await using var cmd = new NpgsqlCommand(sql.ToString(), conn);
-            cmd.Parameters.AddRange(parameters.ToArray());
+            cmd.Parameters.AddRange(parameters.ToArray());  
 
             await using var reader = await cmd.ExecuteReaderAsync();
 

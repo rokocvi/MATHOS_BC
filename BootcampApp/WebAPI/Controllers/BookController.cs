@@ -2,7 +2,9 @@
 using BootcampApp.Models;
 using BootcampApp.Service;
 using System.Collections.Generic;
-using BootcampApp.Service.Interfaces;
+using BootcampApp.Service.Common;
+using BootcampApp.Repository.Common;
+
 
 namespace WebAPI.Controllers
 {

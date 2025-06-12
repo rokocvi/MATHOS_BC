@@ -1,7 +1,8 @@
 ﻿using BootcampApp.Models;
-using BootcampApp.Repository.Interfaces;
-using BootcampApp.Service.Interfaces;
 using static BootcampApp.Models.BookController;
+using BootcampApp.Repository.Common;
+using BootcampApp.Service.Common;
+
 
 namespace BootcampApp.Service
 {

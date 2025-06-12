@@ -1,9 +1,9 @@
-using BootcampApp.Repository.Interfaces;
+using Autofac;
+using Autofac.Extensions.DependencyInjection;
 using BootcampApp.Repository;
-using BootcampApp.Service.Interfaces;
 using BootcampApp.Service;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
+using BootcampApp.Service.Common;
+using BootcampApp.Repository.Common;
 
 namespace WebAPI
 {
@@ -13,23 +13,32 @@ namespace WebAPI
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Dodaj servise PRIJED Build()
+            // ? Kaži ASP.NET Core-u da koristi Autofac kao DI container
+            builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory());
+
+        
+            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+            // ?? Registracija modula/servisa se radi u ConfigureContainer
+            builder.Host.ConfigureContainer<ContainerBuilder>(container =>
+            {
+                // Repozitoriji
+                container.Register(c => new BookRepository(connectionString)).As<IBookRepository>().InstancePerLifetimeScope();
+                container.RegisterType<AuthorRepository>().As<IAuthorRepository>().InstancePerLifetimeScope();
+
+                // Servisi
+                container.RegisterType<BookService>().As<IBookService>().InstancePerLifetimeScope();
+                container.RegisterType<AuthorService>().As<IAuthorService>().InstancePerLifetimeScope();
+            });
+
+            // Ostale ASP.NET usluge
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
-            // Ako imaš connection string u appsettings.json
-            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-
-            // Registracija repozitorija i servisa
-            builder.Services.AddScoped<IBookRepository>(provider => new BookRepository(connectionString));
-            builder.Services.AddScoped<IBookService, BookService>();
-            builder.Services.AddScoped<IAuthorRepository, AuthorRepository>();
-            builder.Services.AddScoped<IAuthorService, AuthorService>();
-
             var app = builder.Build();
 
-            // Konfiguracija middlewarea
+            // Middleware
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
@@ -38,9 +47,7 @@ namespace WebAPI
 
             app.UseHttpsRedirection();
             app.UseAuthorization();
-
             app.MapControllers();
-
             app.Run();
         }
     }

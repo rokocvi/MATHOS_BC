@@ -1,7 +1,7 @@
 ﻿using BootcampApp.Models;
 using System.Collections.Generic;
 
-namespace BootcampApp.Service
+namespace BootcampApp.Service.Common
 {
     public interface IAuthorService
     {
