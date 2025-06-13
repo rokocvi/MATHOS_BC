@@ -73,9 +73,9 @@ namespace WebAPI.Controllers
         }
 
         [HttpGet("author/{authorId}/books")]
-        public async Task<ActionResult<List<Book>>> GetBooksByAuthorAsync(int authorId)
+        public async Task<ActionResult<List<Book>>> GetBooksByAuthorAsync(int authorId, string sortBy, string sortDirection, double? minRating)
         {
-            var books = await _bookService.GetBooksByAuthorAsync(authorId);
+            var books = await _bookService.GetBooksByAuthorAsync(authorId, sortBy, sortDirection, minRating);
             if (books == null || books.Count == 0)
                 return NotFound($"No books found for author with ID {authorId}.");
 

@@ -40,9 +40,9 @@ namespace BootcampApp.Service
             await _bookRepository.DeleteBookFromDbAsync(id);
         }
 
-        public async Task<List<Book>> GetBooksByAuthorAsync(int authorId)
+        public async Task<List<Book>> GetBooksByAuthorAsync(int authorId, string sortBy, string sortDirection, double? minRating)
         {
-            return await _bookRepository.GetBooksByAuthorIdAsync(authorId);
+            return await _bookRepository.GetBooksByAuthorIdAsync(authorId, sortBy, sortDirection, minRating);
         }
 
         public async Task<List<Book>> GetBooksByLibraryAsync(int libraryId)

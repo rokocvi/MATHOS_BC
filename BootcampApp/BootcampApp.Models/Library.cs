@@ -8,7 +8,6 @@
             public string? Name { get; set; }
             public string? Address { get; set; }
 
-            // Navigacijsko polje
             public List<Book>? Books { get; set; }
         }
 

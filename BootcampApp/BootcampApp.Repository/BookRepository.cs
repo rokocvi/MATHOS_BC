@@ -19,11 +19,11 @@ namespace BootcampApp.Repository
         }
 
         public async Task<List<Book>> GetAllBooksFromDbAsync(
-    string? titleFilter = null,
-    string? sortBy = null,
-    string? sortDirection = "asc",
-    int? page = null,
-    int? pageSize = null)
+        string? titleFilter = null,
+        string? sortBy = null,
+        string? sortDirection = "asc",
+        int? page = null,
+        int? pageSize = null)
         {
             var books = new Dictionary<int, Book>();
 
@@ -122,7 +122,6 @@ namespace BootcampApp.Repository
 
             await using var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync();
-
             var query = @"
             SELECT 
                 b.Id AS BookId, 
@@ -277,46 +276,63 @@ namespace BootcampApp.Repository
             await command.ExecuteNonQueryAsync();
         }
 
-        public async Task<List<Book>> GetBooksByAuthorIdAsync(int authorId)
+        public async Task<List<Book>> GetBooksByAuthorIdAsync(
+        int authorId,
+        string sortBy = "Title",
+        string sortDirection = "ASC",
+        double? minRating = null)
         {
             var books = new List<Book>();
 
             await using var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync();
 
-            string query = @"
-            SELECT 
-                b.Id AS BookId, 
-                b.Title, 
-                b.AuthorId, 
-                b.LibraryId,
-                a.Id AS AuthorDbId, 
-                a.Name AS AuthorName
-            FROM Books b
-            LEFT JOIN Authors a ON b.AuthorId = a.Id
-            WHERE b.AuthorId = @authorId";
+            var validSortFields = new[] { "Title", "rating", "LibraryId" };
+            if (!validSortFields.Contains(sortBy))
+                sortBy = "Title";
+
+            if (sortDirection.ToUpper() != "DESC")
+                sortDirection = "ASC";
+
+            var query = $@"
+                SELECT 
+                    b.Id AS BookId, 
+                    b.Title, 
+                    b.AuthorId, 
+                    b.LibraryId,
+                    b.rating,
+                    a.Name AS AuthorName
+                FROM Books b
+                LEFT JOIN Authors a ON b.AuthorId = a.Id
+                WHERE b.AuthorId = @authorId
+                {(minRating.HasValue ? "AND b.rating >= @minRating" : "")}
+                ORDER BY b.{sortBy} {sortDirection}";
 
             await using var command = new NpgsqlCommand(query, connection);
             command.Parameters.AddWithValue("@authorId", authorId);
 
+            if (minRating.HasValue)
+                command.Parameters.AddWithValue("@minRating", minRating.Value);
+
             await using var reader = await command.ExecuteReaderAsync();
 
-            // Dobijamo indekse kolona koristeći alias-e
             var bookIdIndex = reader.GetOrdinal("BookId");
             var titleIndex = reader.GetOrdinal("Title");
             var authorIdIndex = reader.GetOrdinal("AuthorId");
             var libraryIdIndex = reader.GetOrdinal("LibraryId");
+            var ratingIndex = reader.GetOrdinal("rating");
             var authorNameIndex = reader.GetOrdinal("AuthorName");
 
-            while ( await reader.ReadAsync())
+            while (await reader.ReadAsync())
             {
                 var book = new Book
                 {
                     Id = reader.GetInt32(bookIdIndex),
                     Title = reader.GetString(titleIndex),
                     AuthorId = reader.GetInt32(authorIdIndex),
-                    Author = reader.GetString(5),
-                    LibraryId = reader.GetInt32(libraryIdIndex)   
+                    LibraryId = reader.GetInt32(libraryIdIndex),
+                    rating = reader.IsDBNull(ratingIndex) ? 0 : reader.GetDouble(ratingIndex),
+                    Author = reader.GetString(authorNameIndex)
                 };
 
                 books.Add(book);
@@ -324,6 +340,7 @@ namespace BootcampApp.Repository
 
             return books;
         }
+
         public async Task<List<Book>> GetBooksByLibraryIdAsync(int libraryId)
         {
             var books = new List<Book>();

@@ -13,7 +13,7 @@ namespace BootcampApp.Repository.Common
         Task<Book> AddBookToDbAsync(Book book);
         Task UpdateBookInDbAsync(int id, Book book);
         Task DeleteBookFromDbAsync(int id);
-        Task<List<Book>> GetBooksByAuthorIdAsync(int authorId);
+        Task<List<Book>> GetBooksByAuthorIdAsync(int authorId, string sortBy = "Title", string sortDirection = "ASC", double? minRating = null);
         Task<List<Book>> GetBooksByLibraryIdAsync(int libraryId);
         Task<List<Genre>> GetGenresByBookIdAsync(int bookId, string? nameFilter = null, string? sortBy = null, string? sortDirection = "asc", int? page = null, int? pageSize = null);
         Task AddGenresToBookAsync(int bookId, IEnumerable<int> genreIds);
