@@ -30,7 +30,7 @@ namespace WebAPI.Controllers
             return Ok(books);
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("{id}")]   
         public async Task<ActionResult<Book>> GetBook(int id)
         {
             var book = await _bookService.GetBookAsync(id);
@@ -75,7 +75,7 @@ namespace WebAPI.Controllers
         [HttpGet("author/{authorId}/books")]
         public async Task<ActionResult<List<Book>>> GetBooksByAuthorAsync(int authorId, string sortBy, string sortDirection, double? minRating)
         {
-            var books = await _bookService.GetBooksByAuthorAsync(authorId, sortBy, sortDirection, minRating);
+            var books = await _bookService.GetBooksByAuthorAsync(authorId, sortBy, sortDirection,minRating);
             if (books == null || books.Count == 0)
                 return NotFound($"No books found for author with ID {authorId}.");
 
@@ -103,6 +103,15 @@ namespace WebAPI.Controllers
         {
             await _bookService.AddGenresToBookAsync(id, genreIds);
             return NoContent();
+        }
+
+        [HttpGet("{userid}/loans")]
+
+        public async Task<ActionResult<List<Loan>>> GetLoans(int userid)
+        {
+            var loans = await _bookService.GetLoansByUserIdAsync(userid);
+            return Ok(loans);
+         
         }
     }
 }

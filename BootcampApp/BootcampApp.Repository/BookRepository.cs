@@ -504,6 +504,60 @@ namespace BootcampApp.Repository
             }
         }
 
-       
+        public async Task<List<Loan>> GetLoansByUserIdAsync(int userId)
+        {
+            var loans = new List<Loan>();
+
+            await using var connection = new NpgsqlConnection(_connectionString);
+            await connection.OpenAsync();
+
+            var query = @"
+            SELECT 
+            l.id AS LoanId,
+            l.loan_date,
+            l.return_date,
+            b.id AS BookId,
+            b.title,
+            u.id AS UserId,
+            u.username,
+            u.email
+             FROM loans l
+             JOiN books b ON l.book_id = b.id
+             JOIN users u ON l.user_id = u.id
+                WHERE l.user_id = @uid";
+
+            await using var command = new NpgsqlCommand(query, connection);
+            command.Parameters.AddWithValue("@uid", userId);
+
+            await using var reader = await command.ExecuteReaderAsync();
+
+            while (await reader.ReadAsync())
+            {
+                var loan = new Loan
+                {
+                    Id = reader.GetInt32(reader.GetOrdinal("LoanId")),
+                    LoanDate = reader.GetDateTime(reader.GetOrdinal("loan_date")),
+                    ReturnDate = reader.GetDateTime(reader.GetOrdinal("return_date")),
+                    BookId = reader.GetInt32(reader.GetOrdinal("BookId")),
+                    Book = new Book
+                    {
+                        Id = reader.GetInt32(reader.GetOrdinal("BookId")),
+                        Title = reader.GetString(reader.GetOrdinal("title"))
+                    },
+                    UserId = reader.GetInt32(reader.GetOrdinal("UserId")),
+                    User = new User
+                    {
+                        Id = reader.GetInt32(reader.GetOrdinal("UserId")),
+                        Username = reader.GetString(reader.GetOrdinal("username")),
+                        Email = reader.GetString(reader.GetOrdinal("email"))
+                    }
+                };
+
+                loans.Add(loan);
+            }
+
+            return loans;
+        }
+
     }
 }

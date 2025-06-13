@@ -59,5 +59,10 @@ namespace BootcampApp.Service
         {
             await _bookRepository.AddGenresToBookAsync(bookId, genreIds);
         }
+
+        public async Task<List<Loan>> GetLoansByUserIdAsync(int userId)
+        {
+            return await _bookRepository.GetLoansByUserIdAsync(userId);
+        }
     }
 }

@@ -17,5 +17,6 @@ namespace BootcampApp.Repository.Common
         Task<List<Book>> GetBooksByLibraryIdAsync(int libraryId);
         Task<List<Genre>> GetGenresByBookIdAsync(int bookId, string? nameFilter = null, string? sortBy = null, string? sortDirection = "asc", int? page = null, int? pageSize = null);
         Task AddGenresToBookAsync(int bookId, IEnumerable<int> genreIds);
+        Task<List<Loan>> GetLoansByUserIdAsync(int userId);
     }
 }
